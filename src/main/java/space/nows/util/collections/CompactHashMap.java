@@ -1,0 +1,88 @@
+package space.nows.util.collections;
+
+import java.util.Arrays;
+import java.util.function.BiConsumer;
+
+public class CompactHashMap<K, V> {
+    private Object[] keys;
+    private Object[] values;
+    private int size;
+
+    public CompactHashMap() { this(4); }
+
+    public CompactHashMap(int initialCapacity) {
+        int cap = Math.max(1, initialCapacity);
+        keys = new Object[cap];
+        values = new Object[cap];
+    }
+
+    public int size() { return size; }
+
+    public boolean isEmpty() { return size == 0; }
+
+    private int indexOf(Object key) {
+        Object[] ks = keys;
+        for (int i = 0; i < size; i++) {
+            Object k = ks[i];
+            if (k == key || (key != null && key.equals(k))) return i;
+        }
+        return -1;
+    }
+
+    public boolean containsKey(Object key) { return indexOf(key) >= 0; }
+
+    @SuppressWarnings("unchecked")
+    public V get(Object key) {
+        int i = indexOf(key);
+        return i >= 0 ? (V) values[i] : null;
+    }
+
+    @SuppressWarnings("unchecked")
+    public V getOrDefault(Object key, V defaultValue) {
+        int i = indexOf(key);
+        return i >= 0 ? (V) values[i] : defaultValue;
+    }
+
+    @SuppressWarnings("unchecked")
+    public V put(K key, V value) {
+        int i = indexOf(key);
+        if (i >= 0) {
+            V old = (V) values[i];
+            values[i] = value;
+            return old;
+        }
+        if (size == keys.length) {
+            int newCap = size + (size >> 1) + 1;
+            keys = Arrays.copyOf(keys, newCap);
+            values = Arrays.copyOf(values, newCap);
+        }
+        keys[size] = key;
+        values[size] = value;
+        size++;
+        return null;
+    }
+
+    @SuppressWarnings("unchecked")
+    public V remove(Object key) {
+        int i = indexOf(key);
+        if (i < 0) return null;
+        V old = (V) values[i];
+        int last = --size;
+        keys[i] = keys[last];
+        values[i] = values[last];
+        keys[last] = null;
+        values[last] = null;
+        return old;
+    }
+
+    public void clear() {
+        Arrays.fill(keys, 0, size, null);
+        Arrays.fill(values, 0, size, null);
+        size = 0;
+    }
+
+    @SuppressWarnings("unchecked")
+    public void forEach(BiConsumer<? super K, ? super V> action) {
+        for (int i = 0; i < size; i++) action.accept((K) keys[i], (V) values[i]);
+    }
+}
