@@ -1,4 +1,4 @@
-name: Publish to Maven Central
+name: Publish Maven artifacts
 
 on:
   push:
@@ -90,24 +90,74 @@ jobs:
             *) echo "GPG signing key is not authorized for publishing." >&2; exit 1 ;;
           esac
 
-      - name: Configure Maven Central credentials
-        uses: actions/setup-java@v4
+      - name: Configure publishing credentials
         env:
           CENTRAL_USERNAME: ${{ secrets.CENTRAL_USERNAME }}
           CENTRAL_PASSWORD: ${{ secrets.CENTRAL_PASSWORD }}
-        with:
-          distribution: temurin
-          java-version: '17'
-          server-id: central
-          server-username: CENTRAL_USERNAME
-          server-password: CENTRAL_PASSWORD
+          B2_KEY_ID: ${{ secrets.B2_KEY_ID }}
+          B2_APPLICATION_KEY: ${{ secrets.B2_APPLICATION_KEY }}
+        run: |
+          python3 - <<'PY'
+          import os
+          import xml.etree.ElementTree as ET
+          from pathlib import Path
 
-      - name: Sign and publish
+          names = ("CENTRAL_USERNAME", "CENTRAL_PASSWORD", "B2_KEY_ID", "B2_APPLICATION_KEY")
+          missing = [name for name in names if not os.environ.get(name)]
+          if missing:
+              raise SystemExit("Missing required publishing secrets: " + ", ".join(missing))
+
+          settings = ET.Element(
+              "settings",
+              {
+                  "xmlns": "http://maven.apache.org/SETTINGS/1.2.0",
+                  "xmlns:xsi": "http://www.w3.org/2001/XMLSchema-instance",
+                  "xsi:schemaLocation": (
+                      "http://maven.apache.org/SETTINGS/1.2.0 "
+                      "https://maven.apache.org/xsd/settings-1.2.0.xsd"
+                  ),
+              },
+          )
+          servers = ET.SubElement(settings, "servers")
+          central = ET.SubElement(servers, "server")
+          ET.SubElement(central, "id").text = "central"
+          ET.SubElement(central, "username").text = os.environ["CENTRAL_USERNAME"]
+          ET.SubElement(central, "password").text = os.environ["CENTRAL_PASSWORD"]
+
+          profiles = ET.SubElement(settings, "profiles")
+          profile = ET.SubElement(profiles, "profile")
+          ET.SubElement(profile, "id").text = "snowsutil-publish"
+          properties = ET.SubElement(profile, "properties")
+          ET.SubElement(properties, "keyID").text = os.environ["B2_KEY_ID"]
+          ET.SubElement(properties, "applicationKey").text = os.environ["B2_APPLICATION_KEY"]
+
+          active_profiles = ET.SubElement(settings, "activeProfiles")
+          ET.SubElement(active_profiles, "activeProfile").text = "snowsutil-publish"
+
+          path = Path.home() / ".m2" / "settings.xml"
+          path.parent.mkdir(parents=True, exist_ok=True)
+          ET.ElementTree(settings).write(path, encoding="utf-8", xml_declaration=True)
+          path.chmod(0o600)
+          PY
+
+      - name: Publish to Sonatype Central
         env:
           SIGNING_FINGERPRINT: ${{ steps.gpg-test.outputs.fingerprint }}
           MAVEN_GPG_PASSPHRASE: ${{ secrets.MAVEN_GPG_PASSPHRASE }}
         run: >
           ./mvnw --batch-mode --no-transfer-progress
-          -Prelease
+          -Prelease,central-publish
           -Dgpg.keyname="$SIGNING_FINGERPRINT"
+          -DskipTests
+          deploy
+
+      - name: Publish to Backblaze B2
+        env:
+          SIGNING_FINGERPRINT: ${{ steps.gpg-test.outputs.fingerprint }}
+          MAVEN_GPG_PASSPHRASE: ${{ secrets.MAVEN_GPG_PASSPHRASE }}
+        run: >
+          ./mvnw --batch-mode --no-transfer-progress
+          -Prelease,b2-publish
+          -Dgpg.keyname="$SIGNING_FINGERPRINT"
+          -DskipTests
           deploy
