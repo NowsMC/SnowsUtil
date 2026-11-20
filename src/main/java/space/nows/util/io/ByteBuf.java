@@ -1,7 +1,5 @@
 package space.nows.util.io;
 
-import space.nows.util.array.ByteUtils;
-
 import java.util.Arrays;
 
 public final class ByteBuf {
@@ -37,11 +35,11 @@ public final class ByteBuf {
 
     public ByteBuf writeByte(int v) { ensureWritable(1); data[writePos++] = (byte) v; return this; }
 
-    public ByteBuf writeShort(int v) { ensureWritable(2); ByteUtils.writeShort(data, writePos, (short) v); writePos += 2; return this; }
+    public ByteBuf writeShort(int v) { ensureWritable(2); ByteAccess.writeShort(data, writePos, (short) v); writePos += 2; return this; }
 
-    public ByteBuf writeInt(int v) { ensureWritable(4); ByteUtils.writeInt(data, writePos, v); writePos += 4; return this; }
+    public ByteBuf writeInt(int v) { ensureWritable(4); ByteAccess.writeInt(data, writePos, v); writePos += 4; return this; }
 
-    public ByteBuf writeLong(long v) { ensureWritable(8); ByteUtils.writeLong(data, writePos, v); writePos += 8; return this; }
+    public ByteBuf writeLong(long v) { ensureWritable(8); ByteAccess.writeLong(data, writePos, v); writePos += 8; return this; }
 
     public ByteBuf writeBytes(byte[] src) { return writeBytes(src, 0, src.length); }
 
@@ -54,11 +52,11 @@ public final class ByteBuf {
 
     public byte readByte() { ensureReadable(1); return data[readPos++]; }
 
-    public short readShort() { ensureReadable(2); short v = ByteUtils.readShort(data, readPos); readPos += 2; return v; }
+    public short readShort() { ensureReadable(2); short v = ByteAccess.readShort(data, readPos); readPos += 2; return v; }
 
-    public int readInt() { ensureReadable(4); int v = ByteUtils.readInt(data, readPos); readPos += 4; return v; }
+    public int readInt() { ensureReadable(4); int v = ByteAccess.readInt(data, readPos); readPos += 4; return v; }
 
-    public long readLong() { ensureReadable(8); long v = ByteUtils.readLong(data, readPos); readPos += 8; return v; }
+    public long readLong() { ensureReadable(8); long v = ByteAccess.readLong(data, readPos); readPos += 8; return v; }
 
     public void readBytes(byte[] dst) { readBytes(dst, 0, dst.length); }
 
