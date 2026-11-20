@@ -1,0 +1,58 @@
+name: Publish to Maven Central
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out release
+        uses: actions/checkout@v4
+
+      - name: Set up Java and Maven Central credentials
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: maven
+          server-id: central
+          server-username: CENTRAL_USERNAME
+          server-password: CENTRAL_PASSWORD
+
+      - name: Import signing key
+        env:
+          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+          GPG_KEY_ID: ${{ secrets.GPG_KEY_ID }}
+        run: |
+          case "$GPG_KEY_ID" in
+            B64B156379154E5B6C176D0D6157503BFCD109A4|F860FD4D277DFFEDE47028DC7311416EAA9848E4) ;;
+            *) echo "GPG_KEY_ID must be one of the authorized signing-key fingerprints." >&2; exit 1 ;;
+          esac
+          printf '%s' "$GPG_PRIVATE_KEY" | gpg --batch --import
+          gpg --batch --list-secret-keys "$GPG_KEY_ID" >/dev/null
+
+      - name: Set release version
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+([.-][0-9A-Za-z.-]+)?$ ]]; then
+            echo "Release tag must contain a valid Maven release version." >&2
+            exit 1
+          fi
+          ./mvnw --batch-mode --no-transfer-progress versions:set \
+            -DnewVersion="$version" \
+            -DgenerateBackupPoms=false
+
+      - name: Sign and publish
+        env:
+          GPG_KEY_ID: ${{ secrets.GPG_KEY_ID }}
+          MAVEN_GPG_PASSPHRASE: ${{ secrets.MAVEN_GPG_PASSPHRASE }}
+        run: >
+          ./mvnw --batch-mode --no-transfer-progress
+          -Prelease
+          -Dgpg.keyname="$GPG_KEY_ID"
+          deploy
