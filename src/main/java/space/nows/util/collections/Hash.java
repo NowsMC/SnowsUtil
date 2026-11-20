@@ -31,4 +31,12 @@ final class Hash {
     static int threshold(int cap, float lf) {
         return Math.min(cap - 1, (int) (cap * lf));
     }
+
+    /**
+     * Backward-shift deletion test for linear probing: may the entry at {@code pos}
+     * (whose home slot is {@code slot}) be moved into the hole at {@code last}?
+     */
+    static boolean isMovable(int last, int pos, int slot) {
+        return last <= pos ? (last >= slot || slot > pos) : (last >= slot && slot > pos);
+    }
 }

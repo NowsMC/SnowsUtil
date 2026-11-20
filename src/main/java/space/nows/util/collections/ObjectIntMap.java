@@ -113,7 +113,7 @@ public class ObjectIntMap<K> {
                 curr = k[pos];
                 if (curr == null) { k[last] = null; return; }
                 slot = hash(curr) & mask;
-                boolean movable = last <= pos ? (last >= slot || slot > pos) : (last >= slot && slot > pos);
+                boolean movable = Hash.isMovable(last, pos, slot);
                 if (movable) break;
                 pos = (pos + 1) & mask;
             }

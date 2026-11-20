@@ -85,7 +85,7 @@ public class IntHashSet {
                 curr = k[pos];
                 if (curr == 0) { k[last] = 0; return; }
                 slot = Hash.mix(curr) & mask;
-                boolean movable = last <= pos ? (last >= slot || slot > pos) : (last >= slot && slot > pos);
+                boolean movable = Hash.isMovable(last, pos, slot);
                 if (movable) break;
                 pos = (pos + 1) & mask;
             }

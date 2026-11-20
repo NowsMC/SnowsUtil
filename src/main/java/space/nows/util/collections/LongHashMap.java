@@ -107,7 +107,7 @@ public class LongHashMap<V> {
                 curr = k[pos];
                 if (curr == 0L) { k[last] = 0L; v[last] = null; return; }
                 slot = Hash.mix(curr) & mask;
-                boolean movable = last <= pos ? (last >= slot || slot > pos) : (last >= slot && slot > pos);
+                boolean movable = Hash.isMovable(last, pos, slot);
                 if (movable) break;
                 pos = (pos + 1) & mask;
             }

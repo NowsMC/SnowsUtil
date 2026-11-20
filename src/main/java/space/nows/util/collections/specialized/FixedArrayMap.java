@@ -1,4 +1,4 @@
-package space.nows.util.collections;
+package space.nows.util.collections.specialized;
 
 import java.util.Arrays;
 
