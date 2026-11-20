@@ -1,7 +1,8 @@
-package space.nows.util.array;
+package space.nows.util.bits;
 
-public final class BitUtils {
-    private BitUtils() {}
+/** Fixed-size bit sets stored in {@code long[]}: create, get/set/flip, count, scan. */
+public final class BitSets {
+    private BitSets() {}
 
     public static long[] create(int nbits) { return new long[(nbits + 63) >>> 6]; }
 
@@ -41,16 +42,4 @@ public final class BitUtils {
         for (int i = from; i < nbits; i++) if (!get(bits, i)) return i;
         return -1;
     }
-
-    public static boolean isSet(int value, int bit) { return (value & (1 << bit)) != 0; }
-
-    public static int setBit(int value, int bit) { return value | (1 << bit); }
-
-    public static int clearBit(int value, int bit) { return value & ~(1 << bit); }
-
-    public static int toggleBit(int value, int bit) { return value ^ (1 << bit); }
-
-    public static int count(int value) { return Integer.bitCount(value); }
-
-    public static int lowestSetBit(int value) { return value & -value; }
 }
