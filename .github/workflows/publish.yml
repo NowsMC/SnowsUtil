@@ -1,8 +1,9 @@
 name: Publish to Maven Central
 
 on:
-  release:
-    types: [published]
+  push:
+    tags:
+      - 'v*'
 
 permissions:
   contents: read
@@ -14,30 +15,19 @@ jobs:
       - name: Check out release
         uses: actions/checkout@v4
 
-      - name: Set up Java and Maven Central credentials
+      - name: Set up Java
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
           cache: maven
-          server-id: central
-          server-username: CENTRAL_USERNAME
-          server-password: CENTRAL_PASSWORD
-
-      - name: Import signing key
-        env:
-          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
-          GPG_KEY_ID: ${{ secrets.GPG_KEY_ID }}
-        run: |
-          case "$GPG_KEY_ID" in
-            B64B156379154E5B6C176D0D6157503BFCD109A4|F860FD4D277DFFEDE47028DC7311416EAA9848E4) ;;
-            *) echo "GPG_KEY_ID must be one of the authorized signing-key fingerprints." >&2; exit 1 ;;
-          esac
-          printf '%s' "$GPG_PRIVATE_KEY" | gpg --batch --import
-          gpg --batch --list-secret-keys "$GPG_KEY_ID" >/dev/null
 
       - name: Set release version
         run: |
+          if [[ "$GITHUB_REF_NAME" != v* ]]; then
+            echo "Publishing requires a v-prefixed tag." >&2
+            exit 1
+          fi
           version="${GITHUB_REF_NAME#v}"
           if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+([.-][0-9A-Za-z.-]+)?$ ]]; then
             echo "Release tag must contain a valid Maven release version." >&2
@@ -47,12 +37,77 @@ jobs:
             -DnewVersion="$version" \
             -DgenerateBackupPoms=false
 
-      - name: Sign and publish
+      - name: Build and test before publishing
+        run: ./mvnw --batch-mode --no-transfer-progress verify
+
+      - name: Import signing key
+        env:
+          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+        run: |
+          printf '%s\n' "$GPG_PRIVATE_KEY" | gpg --batch --import
+
+      - name: Test GPG signing
+        id: gpg-test
         env:
           GPG_KEY_ID: ${{ secrets.GPG_KEY_ID }}
+          MAVEN_GPG_PASSPHRASE: ${{ secrets.MAVEN_GPG_PASSPHRASE }}
+        run: |
+          temp_dir="$(mktemp -d)"
+          trap 'rm -rf "$temp_dir"' EXIT
+          printf 'SnowsUtil signing check\n' > "$temp_dir/payload"
+          if [[ -n "$MAVEN_GPG_PASSPHRASE" ]]; then
+            printf '%s\n' "$MAVEN_GPG_PASSPHRASE" |
+              gpg --batch --yes --pinentry-mode loopback --passphrase-fd 0 \
+                --local-user "$GPG_KEY_ID" --detach-sign \
+                --output "$temp_dir/signature.asc" "$temp_dir/payload"
+          else
+            gpg --batch --yes --local-user "$GPG_KEY_ID" --detach-sign \
+              --output "$temp_dir/signature.asc" "$temp_dir/payload"
+          fi
+          fingerprint="$(
+            gpg --batch --status-fd 1 --verify \
+              "$temp_dir/signature.asc" "$temp_dir/payload" 2>/dev/null |
+              awk '$2 == "VALIDSIG" {
+                for (i = 3; i <= NF; i++)
+                  if ((length($i) == 40 || length($i) == 64) && $i ~ /^[[:xdigit:]]+$/)
+                    fingerprint = $i
+                print toupper(fingerprint)
+                exit
+              }'
+          )"
+          if [[ -z "$fingerprint" ]]; then
+            echo "GPG signing test did not return a verified fingerprint." >&2
+            exit 1
+          fi
+          echo "fingerprint=$fingerprint" >> "$GITHUB_OUTPUT"
+
+      - name: Check signing key authorization
+        env:
+          SIGNING_FINGERPRINT: ${{ steps.gpg-test.outputs.fingerprint }}
+        run: |
+          case "$SIGNING_FINGERPRINT" in
+            B64B156379154E5B6C176D0D6157503BFCD109A4|F860FD4D277DFFEDE47028DC7311416EAA9848E4) ;;
+            *) echo "GPG signing key is not authorized for publishing." >&2; exit 1 ;;
+          esac
+
+      - name: Configure Maven Central credentials
+        uses: actions/setup-java@v4
+        env:
+          CENTRAL_USERNAME: ${{ secrets.CENTRAL_USERNAME }}
+          CENTRAL_PASSWORD: ${{ secrets.CENTRAL_PASSWORD }}
+        with:
+          distribution: temurin
+          java-version: '17'
+          server-id: central
+          server-username: CENTRAL_USERNAME
+          server-password: CENTRAL_PASSWORD
+
+      - name: Sign and publish
+        env:
+          SIGNING_FINGERPRINT: ${{ steps.gpg-test.outputs.fingerprint }}
           MAVEN_GPG_PASSPHRASE: ${{ secrets.MAVEN_GPG_PASSPHRASE }}
         run: >
           ./mvnw --batch-mode --no-transfer-progress
           -Prelease
-          -Dgpg.keyname="$GPG_KEY_ID"
+          -Dgpg.keyname="$SIGNING_FINGERPRINT"
           deploy
