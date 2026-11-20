@@ -11,6 +11,15 @@
 
   <name>Snows Util</name>
   <description>Low-allocation Java utility library: primitive collections, fast math, array/byte/bit helpers, I/O, text and concurrency utilities.</description>
+  <url>https://github.com/NowsMC/SnowsUtil</url>
+
+  <licenses>
+    <license>
+      <name>Apache License, Version 2.0</name>
+      <url>https://www.apache.org/licenses/LICENSE-2.0.txt</url>
+      <distribution>repo</distribution>
+    </license>
+  </licenses>
 
   <developers>
     <developer>
@@ -22,6 +31,12 @@
       </roles>
     </developer>
   </developers>
+
+  <scm>
+    <connection>scm:git:ssh://git@github.com/NowsMC/SnowsUtil.git</connection>
+    <developerConnection>scm:git:ssh://git@github.com/NowsMC/SnowsUtil.git</developerConnection>
+    <url>https://github.com/NowsMC/SnowsUtil</url>
+  </scm>
 
   <properties>
     <maven.compiler.release>17</maven.compiler.release>
