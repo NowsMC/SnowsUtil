@@ -1,4 +1,4 @@
-package space.nows.util.math;
+package space.nows.util.math.linear;
 
 public final class Quaternion {
     public float x, y, z, w = 1f;

@@ -1,4 +1,4 @@
-package space.nows.util.math;
+package space.nows.util.math.linear;
 
 public final class Vec2 {
     public float x, y;
