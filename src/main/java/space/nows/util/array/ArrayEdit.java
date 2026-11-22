@@ -4,7 +4,7 @@ import space.nows.util.check.Preconditions;
 
 import java.util.Arrays;
 
-/** Structural edits that return a new array: insert, remove, append and concatenate. Swap-remove works in place. */
+/** Structural edits that return a new array: insert, remove, append and concatenate. Swap-remove works in place. Generated from {@code ArrayEdit.tpl}; edit the template, not this file. */
 public final class ArrayEdit {
     private ArrayEdit() {}
 
@@ -47,6 +47,7 @@ public final class ArrayEdit {
         return size - 1;
     }
 
+    /** Overwrites {@code index} with the last live element and returns the new logical size. Order is not kept. */
     public static int swapRemove(int[] a, int index, int size) {
         Preconditions.position(size, Preconditions.notNull(a, "a").length);
         Preconditions.index(index, size);
@@ -54,6 +55,7 @@ public final class ArrayEdit {
         return size - 1;
     }
 
+    /** Overwrites {@code index} with the last live element and returns the new logical size. Order is not kept. */
     public static int swapRemove(long[] a, int index, int size) {
         Preconditions.position(size, Preconditions.notNull(a, "a").length);
         Preconditions.index(index, size);

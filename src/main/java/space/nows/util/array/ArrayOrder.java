@@ -2,7 +2,7 @@ package space.nows.util.array;
 
 import java.util.NoSuchElementException;
 
-/** Ordering queries: sortedness, minimum and maximum. */
+/** Ordering queries: sortedness, minimum and maximum. Generated from {@code ArrayOrder.tpl}; edit the template, not this file. */
 public final class ArrayOrder {
     private ArrayOrder() {}
 
