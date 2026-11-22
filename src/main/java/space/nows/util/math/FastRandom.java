@@ -2,6 +2,7 @@ package space.nows.util.math;
 
 import space.nows.util.check.Preconditions;
 
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.random.RandomGenerator;
 
 /**
@@ -9,9 +10,11 @@ import java.util.random.RandomGenerator;
  * {@code ints()}, {@code doubles()}, bounded {@code nextLong}, etc. Not thread-safe and not cryptographically secure.
  */
 public final class FastRandom implements RandomGenerator {
+    private static final AtomicLong SEED_UNIQUIFIER = new AtomicLong(8682522807148012L);
+
     private long s0, s1;
 
-    public FastRandom() { this(System.nanoTime() ^ 0x5DEECE66DL); }
+    public FastRandom() { this(SEED_UNIQUIFIER.updateAndGet(x -> x * 1181783497276652981L) ^ System.nanoTime()); }
 
     public FastRandom(long seed) { setSeed(seed); }
 
