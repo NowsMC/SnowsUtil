@@ -1,26 +1,8 @@
 package space.nows.util.bits;
 
-import space.nows.util.error.Checks;
-
-/** Single-bit and bit-field operations on an {@code int}. Bit indices must be in {@code [0, 32)} (no silent shift wrap-around). */
-public final class BitOps {
-    private BitOps() {}
-
-    public static boolean isSet(int value, int bit) { return (value & (1 << Checks.index(bit, 32))) != 0; }
-
-    public static int setBit(int value, int bit) { return value | (1 << Checks.index(bit, 32)); }
-
-    public static int clearBit(int value, int bit) { return value & ~(1 << Checks.index(bit, 32)); }
-
-    public static int toggleBit(int value, int bit) { return value ^ (1 << Checks.index(bit, 32)); }
-
-    public static int count(int value) { return Integer.bitCount(value); }
-
-    /** Isolates the lowest set bit as a mask ({@code 0} if none). */
-    public static int lowestSetBit(int value) { return value & -value; }
-
-    /** Isolates the highest set bit as a mask ({@code 0} if none). */
-    public static int highestSetBit(int value) { return Integer.highestOneBit(value); }
+/** Multi-bit fields inside an {@code int}: build masks, read a field, and write a field without disturbing its neighbours. */
+public final class BitField {
+    private BitField() {}
 
     /** A mask with the low {@code width} bits set; {@code width} may be 0..32. */
     public static int mask(int width) {
