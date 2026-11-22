@@ -18,13 +18,13 @@ public final class Interpolation {
 
     public static float smoothstep(float edge0, float edge1, float x) {
         if (edge0 == edge1) return x < edge0 ? 0f : 1f;
-        float t = FastMath.clamp((x - edge0) / (edge1 - edge0), 0f, 1f);
+        float t = Bounds.clamp((x - edge0) / (edge1 - edge0), 0f, 1f);
         return t * t * (3f - 2f * t);
     }
 
     public static float smootherstep(float edge0, float edge1, float x) {
         if (edge0 == edge1) return x < edge0 ? 0f : 1f;
-        float t = FastMath.clamp((x - edge0) / (edge1 - edge0), 0f, 1f);
+        float t = Bounds.clamp((x - edge0) / (edge1 - edge0), 0f, 1f);
         return t * t * t * (t * (t * 6f - 15f) + 10f);
     }
 
@@ -35,8 +35,8 @@ public final class Interpolation {
 
     /** Interpolates along the shortest arc between two angles in radians. */
     public static float lerpAngle(float a, float b, float t) {
-        float d = FastMath.mod(b - a, FastMath.TWO_PI);
-        if (d > FastMath.PI) d -= FastMath.TWO_PI;
+        float d = Modulo.mod(b - a, Angles.TWO_PI);
+        if (d > Angles.PI) d -= Angles.TWO_PI;
         return a + d * t;
     }
 }

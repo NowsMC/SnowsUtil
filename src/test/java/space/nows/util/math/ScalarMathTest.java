@@ -8,14 +8,14 @@ import java.util.random.RandomGenerator;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class FastMathTest {
-    // ---------------------------------------------------------------- FastMath
+class ScalarMathTest {
+    // ---------------------------------------------------------------- Angles, Bounds, Signs, Rounding, Modulo, Scalars
     @Test void scalarHelpers() {
-        assertEquals(5, FastMath.clamp(9, 0, 5));
-        assertEquals(-2, FastMath.fastFloor(-1.5f));
-        assertEquals(-1, FastMath.fastCeil(-1.5f));
-        assertEquals(3, FastMath.fastAbs(-3));
-        assertEquals(2.5f, FastMath.fastAbs(-2.5f));
+        assertEquals(5, Bounds.clamp(9, 0, 5));
+        assertEquals(-2, Rounding.floor(-1.5f));
+        assertEquals(-1, Rounding.ceil(-1.5f));
+        assertEquals(3, Signs.abs(-3));
+        assertEquals(2.5f, Signs.abs(-2.5f));
     }
 
     @Test void floorAndCeilMatchMathInTheIntRange() {
@@ -23,63 +23,63 @@ class FastMathTest {
         for (int i = 0; i < 200_000; i++) {
             float f = (r.nextFloat() - 0.5f) * 2e6f;
             double d = (r.nextDouble() - 0.5) * 4e9 / 2.0;
-            assertEquals((int) Math.floor(f), FastMath.fastFloor(f));
-            assertEquals((int) Math.ceil(f), FastMath.fastCeil(f));
-            assertEquals((long) Math.floor(d), FastMath.fastFloor(d));
-            assertEquals((long) Math.ceil(d), FastMath.fastCeil(d));
+            assertEquals((int) Math.floor(f), Rounding.floor(f));
+            assertEquals((int) Math.ceil(f), Rounding.ceil(f));
+            assertEquals((long) Math.floor(d), Rounding.floor(d));
+            assertEquals((long) Math.ceil(d), Rounding.ceil(d));
         }
-        assertEquals(-1, FastMath.fastFloor(-0.5f));
-        assertEquals(0, FastMath.fastFloor(-0.0f));
-        assertEquals(1, FastMath.fastCeil(0.0001f));
+        assertEquals(-1, Rounding.floor(-0.5f));
+        assertEquals(0, Rounding.floor(-0.0f));
+        assertEquals(1, Rounding.ceil(0.0001f));
     }
 
     @Test void floorAndCeilSaturateInsteadOfOverflowing() {
-        assertEquals(Integer.MIN_VALUE, FastMath.fastFloor(-3e9f));     // used to wrap around to Integer.MAX_VALUE
-        assertEquals(Integer.MIN_VALUE, FastMath.fastFloor(-3e9));
-        assertEquals(Integer.MAX_VALUE, FastMath.fastFloor(3e9f));
-        assertEquals(Integer.MAX_VALUE, FastMath.fastCeil(3e9f));       // used to wrap around to Integer.MIN_VALUE
-        assertEquals(Integer.MAX_VALUE, FastMath.fastCeil(3e9));
-        assertEquals(Integer.MIN_VALUE, FastMath.fastCeil(-3e9));
-        assertEquals(0, FastMath.fastFloor(Float.NaN));
-        assertEquals(Integer.MAX_VALUE, FastMath.fastFloor(Float.POSITIVE_INFINITY));
+        assertEquals(Integer.MIN_VALUE, Rounding.floor(-3e9f));     // used to wrap around to Integer.MAX_VALUE
+        assertEquals(Integer.MIN_VALUE, Rounding.floor(-3e9));
+        assertEquals(Integer.MAX_VALUE, Rounding.floor(3e9f));
+        assertEquals(Integer.MAX_VALUE, Rounding.ceil(3e9f));       // used to wrap around to Integer.MIN_VALUE
+        assertEquals(Integer.MAX_VALUE, Rounding.ceil(3e9));
+        assertEquals(Integer.MIN_VALUE, Rounding.ceil(-3e9));
+        assertEquals(0, Rounding.floor(Float.NaN));
+        assertEquals(Integer.MAX_VALUE, Rounding.floor(Float.POSITIVE_INFINITY));
     }
 
     @Test void roundIsExactHalfUp() {
-        assertEquals(0, FastMath.fastRound(0.49999997f));              // floor(v + 0.5f) misrounded this to 1
-        assertEquals(3, FastMath.fastRound(2.5f));
-        assertEquals(-2, FastMath.fastRound(-2.5f));
-        assertEquals(-3, FastMath.fastRound(-2.6f));
-        assertEquals(0, FastMath.fastRound(Float.NaN));
-        assertEquals(Integer.MAX_VALUE, FastMath.fastRound(1e20f));
-        assertEquals(Integer.MAX_VALUE, FastMath.fastRound(1e20));
-        assertEquals(Integer.MIN_VALUE, FastMath.fastRound(-1e20));
-        assertEquals(0, FastMath.fastRound(0.49999999999999994));
-        assertEquals(4, FastMath.fastRound(3.5));
+        assertEquals(0, Rounding.round(0.49999997f));              // floor(v + 0.5f) misrounded this to 1
+        assertEquals(3, Rounding.round(2.5f));
+        assertEquals(-2, Rounding.round(-2.5f));
+        assertEquals(-3, Rounding.round(-2.6f));
+        assertEquals(0, Rounding.round(Float.NaN));
+        assertEquals(Integer.MAX_VALUE, Rounding.round(1e20f));
+        assertEquals(Integer.MAX_VALUE, Rounding.round(1e20));
+        assertEquals(Integer.MIN_VALUE, Rounding.round(-1e20));
+        assertEquals(0, Rounding.round(0.49999999999999994));
+        assertEquals(4, Rounding.round(3.5));
     }
 
     @Test void moduloHasTheSignOfTheDivisorAndStaysInRange() {
-        assertEquals(4, FastMath.mod(-1, 5));
-        assertEquals(0, FastMath.mod(10, 5));
-        assertEquals(Math.floorMod(5, -3), FastMath.mod(5, -3));        // negative divisors used to give wrong answers
-        assertThrows(ArithmeticException.class, () -> FastMath.mod(1, 0));
-        assertEquals(359f, FastMath.mod(-1f, 360f), 1e-4);
-        assertEquals(0.25f, FastMath.mod(5.25f, 1f), 1e-6);
+        assertEquals(4, Modulo.mod(-1, 5));
+        assertEquals(0, Modulo.mod(10, 5));
+        assertEquals(Math.floorMod(5, -3), Modulo.mod(5, -3));        // negative divisors used to give wrong answers
+        assertThrows(ArithmeticException.class, () -> Modulo.mod(1, 0));
+        assertEquals(359f, Modulo.mod(-1f, 360f), 1e-4);
+        assertEquals(0.25f, Modulo.mod(5.25f, 1f), 1e-6);
         Random r = new Random(52);
         for (int i = 0; i < 100_000; i++) {
             float a = (r.nextFloat() - 0.5f) * 1e4f;
             float m = 0.001f + r.nextFloat() * 400f;
-            float v = FastMath.mod(a, m);
+            float v = Modulo.mod(a, m);
             assertTrue(v >= 0f && v < m, a + " mod " + m + " = " + v);
         }
-        float tiny = FastMath.mod(-1e-9f, 360f);                        // -1e-9 + 360 rounds to 360f; the result must still be < 360
+        float tiny = Modulo.mod(-1e-9f, 360f);                        // -1e-9 + 360 rounds to 360f; the result must still be < 360
         assertTrue(tiny >= 0f && tiny < 360f);
-        assertTrue(Float.isNaN(FastMath.mod(Float.NaN, 5f)));
-        assertThrows(IllegalArgumentException.class, () -> FastMath.mod(1f, 0f));
-        assertThrows(IllegalArgumentException.class, () -> FastMath.mod(1f, -2f));
-        assertThrows(IllegalArgumentException.class, () -> FastMath.mod(1f, Float.NaN));
+        assertTrue(Float.isNaN(Modulo.mod(Float.NaN, 5f)));
+        assertThrows(IllegalArgumentException.class, () -> Modulo.mod(1f, 0f));
+        assertThrows(IllegalArgumentException.class, () -> Modulo.mod(1f, -2f));
+        assertThrows(IllegalArgumentException.class, () -> Modulo.mod(1f, Float.NaN));
     }
 
-    // ---------------------------------------------------------------- Interpolation / IntMath
+    // ---------------------------------------------------------------- Interpolation / PowersOfTwo
     @Test void interpolation() {
         assertEquals(15f, Interpolation.lerp(10f, 20f, 0.5f), 1e-6);
         assertEquals(0.5f, Interpolation.inverseLerp(10f, 20f, 15f), 1e-6);
@@ -91,34 +91,34 @@ class FastMathTest {
     @Test void remapAndAngles() {
         assertEquals(150f, Interpolation.remap(5f, 0f, 10f, 100f, 200f), 1e-4);
         assertEquals(100f, Interpolation.remap(5f, 3f, 3f, 100f, 200f), 1e-4);          // degenerate input range -> outMin, no NaN
-        assertEquals(0f, Interpolation.lerpAngle(0.1f, FastMath.TWO_PI - 0.1f, 0.5f), 1e-5);   // goes the short way round
+        assertEquals(0f, Interpolation.lerpAngle(0.1f, Angles.TWO_PI - 0.1f, 0.5f), 1e-5);   // goes the short way round
         assertEquals(1f, Interpolation.lerpAngle(1f, 1f, 0.7f), 1e-6);
         assertEquals(0.5f, Interpolation.lerpAngle(0f, 1f, 0.5f), 1e-6);
     }
 
     @Test void intMath() {
-        assertEquals(16, IntMath.nextPowerOfTwo(9));
-        assertEquals(3, IntMath.log2(8));
-        assertEquals(0, IntMath.ceilLog2(1));
-        assertEquals(1, IntMath.ceilLog2(2));
-        assertEquals(2, IntMath.ceilLog2(3));
-        assertEquals(10, IntMath.ceilLog2(1024));
-        assertEquals(11, IntMath.ceilLog2(1025));
-        assertEquals(30, IntMath.ceilLog2(1 << 30));
-        assertEquals(31, IntMath.ceilLog2(Integer.MAX_VALUE));
-        assertThrows(IllegalArgumentException.class, () -> IntMath.ceilLog2(0));
-        assertThrows(IllegalArgumentException.class, () -> IntMath.ceilLog2(-4));
+        assertEquals(16, PowersOfTwo.nextPowerOfTwo(9));
+        assertEquals(3, PowersOfTwo.log2(8));
+        assertEquals(0, PowersOfTwo.ceilLog2(1));
+        assertEquals(1, PowersOfTwo.ceilLog2(2));
+        assertEquals(2, PowersOfTwo.ceilLog2(3));
+        assertEquals(10, PowersOfTwo.ceilLog2(1024));
+        assertEquals(11, PowersOfTwo.ceilLog2(1025));
+        assertEquals(30, PowersOfTwo.ceilLog2(1 << 30));
+        assertEquals(31, PowersOfTwo.ceilLog2(Integer.MAX_VALUE));
+        assertThrows(IllegalArgumentException.class, () -> PowersOfTwo.ceilLog2(0));
+        assertThrows(IllegalArgumentException.class, () -> PowersOfTwo.ceilLog2(-4));
     }
 
     @Test void alignUp() {
-        assertEquals(8, IntMath.alignUp(5, 4));
-        assertEquals(8, IntMath.alignUp(8, 4));
-        assertEquals(0, IntMath.alignUp(0, 16));
-        assertEquals(-4, IntMath.alignUp(-5, 4));
-        assertEquals(7, IntMath.alignUp(7, 1));
-        assertThrows(IllegalArgumentException.class, () -> IntMath.alignUp(3, 3));
-        assertThrows(IllegalArgumentException.class, () -> IntMath.alignUp(3, 0));
-        assertThrows(ArithmeticException.class, () -> IntMath.alignUp(Integer.MAX_VALUE, 2));
+        assertEquals(8, PowersOfTwo.alignUp(5, 4));
+        assertEquals(8, PowersOfTwo.alignUp(8, 4));
+        assertEquals(0, PowersOfTwo.alignUp(0, 16));
+        assertEquals(-4, PowersOfTwo.alignUp(-5, 4));
+        assertEquals(7, PowersOfTwo.alignUp(7, 1));
+        assertThrows(IllegalArgumentException.class, () -> PowersOfTwo.alignUp(3, 3));
+        assertThrows(IllegalArgumentException.class, () -> PowersOfTwo.alignUp(3, 0));
+        assertThrows(ArithmeticException.class, () -> PowersOfTwo.alignUp(Integer.MAX_VALUE, 2));
     }
 
     // ---------------------------------------------------------------- FastTrig

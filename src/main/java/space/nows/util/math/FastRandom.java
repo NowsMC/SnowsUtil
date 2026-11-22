@@ -1,6 +1,6 @@
 package space.nows.util.math;
 
-import space.nows.util.error.Checks;
+import space.nows.util.check.Preconditions;
 
 import java.util.random.RandomGenerator;
 
@@ -80,7 +80,7 @@ public final class FastRandom implements RandomGenerator {
     }
 
     @Override public void nextBytes(byte[] out) {
-        Checks.notNull(out, "out");
+        Preconditions.notNull(out, "out");
         int i = 0;
         while (i + 8 <= out.length) {
             long v = nextLong();

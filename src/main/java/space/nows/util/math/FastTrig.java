@@ -11,7 +11,7 @@ public final class FastTrig {
     private static final int TABLE_BITS = 12;
     private static final int TABLE_SIZE = 1 << TABLE_BITS;
     private static final int TABLE_MASK = TABLE_SIZE - 1;
-    private static final float TO_INDEX = TABLE_SIZE / FastMath.TWO_PI;
+    private static final float TO_INDEX = TABLE_SIZE / Angles.TWO_PI;
     private static final float INDEX_LIMIT = (float) (1 << 30);
     private static final float[] SIN_TABLE = new float[TABLE_SIZE];
 
@@ -26,7 +26,7 @@ public final class FastTrig {
         if (!(t > -INDEX_LIMIT && t < INDEX_LIMIT)) {   // false for NaN, +/-Infinity and huge values
             throw new IllegalArgumentException("radians out of supported range: " + radians);
         }
-        return FastMath.fastFloor(t);
+        return Rounding.floor(t);
     }
 
     public static float sin(float radians) { return SIN_TABLE[index(radians) & TABLE_MASK]; }
