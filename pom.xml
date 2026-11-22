@@ -77,13 +77,6 @@
     </dependency>
   </dependencies>
 
-  <repositories>
-    <repository>
-      <id>nows-b2</id>
-      <url>https://files.nows.space/maven/</url>
-    </repository>
-  </repositories>
-
   <build>
     <extensions>
       <extension>
@@ -139,6 +132,25 @@
 
   <profiles>
     <profile>
+      <id>annotation-processing</id>
+      <activation>
+        <jdk>[23,)</jdk>
+      </activation>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-compiler-plugin</artifactId>
+            <configuration>
+              <compilerArgs>
+                <arg>-proc:full</arg>
+              </compilerArgs>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+    <profile>
       <id>benchmark</id>
       <dependencies>
         <dependency>
@@ -154,15 +166,6 @@
       </dependencies>
       <build>
         <plugins>
-          <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-compiler-plugin</artifactId>
-            <configuration>
-              <compilerArgs>
-                <arg>-proc:full</arg>
-              </compilerArgs>
-            </configuration>
-          </plugin>
           <plugin>
             <groupId>org.codehaus.mojo</groupId>
             <artifactId>build-helper-maven-plugin</artifactId>
