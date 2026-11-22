@@ -55,6 +55,7 @@ public class EnumArrayMap<E extends Enum<E>, V> {
     }
 
     public void clear() {
+        if (size == 0) return;
         Arrays.fill(values, null);
         Arrays.fill(present, false);
         size = 0;

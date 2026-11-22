@@ -77,6 +77,7 @@ public class IntRangeArrayMap<V> {
     }
 
     public void clear() {
+        if (size == 0) return;
         Arrays.fill(values, null);
         Arrays.fill(present, false);
         size = 0;
