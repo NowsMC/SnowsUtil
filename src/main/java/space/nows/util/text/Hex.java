@@ -5,6 +5,7 @@ import space.nows.util.check.Preconditions;
 import space.nows.util.error.InvalidHexException;
 
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 
 /** Hexadecimal encoding and strict (ASCII-only) decoding of byte arrays. */
 public final class Hex {
@@ -12,6 +13,16 @@ public final class Hex {
 
     private static final byte[] LOWER = "0123456789abcdef".getBytes(StandardCharsets.ISO_8859_1);
     private static final byte[] UPPER = "0123456789ABCDEF".getBytes(StandardCharsets.ISO_8859_1);
+
+    private static final byte[] DECODE = new byte[128];
+
+    static {
+        Arrays.fill(DECODE, (byte) -1);
+        for (int i = 0; i < 16; i++) {
+            DECODE[LOWER[i]] = (byte) i;
+            DECODE[UPPER[i]] = (byte) i;
+        }
+    }
 
     public static String toHex(byte[] data) { return encode(data, 0, Preconditions.notNull(data, "data").length, LOWER); }
 
@@ -62,10 +73,5 @@ public final class Hex {
         return d;
     }
 
-    private static int digitOf(char c) {
-        if (c >= '0' && c <= '9') return c - '0';
-        if (c >= 'a' && c <= 'f') return c - 'a' + 10;
-        if (c >= 'A' && c <= 'F') return c - 'A' + 10;
-        return -1;
-    }
+    private static int digitOf(char c) { return c < DECODE.length ? DECODE[c] : -1; }
 }
