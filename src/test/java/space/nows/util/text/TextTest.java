@@ -10,7 +10,6 @@ import java.util.Random;
 import static org.junit.jupiter.api.Assertions.*;
 
 class TextTest {
-    // ---------------------------------------------------------------- NumberParser
     private static long jdkLong(String s, long fallback) {
         try { return Long.parseLong(s); } catch (NumberFormatException e) { return fallback; }
     }
@@ -48,8 +47,8 @@ class TextTest {
         }
         assertEquals(-5, NumberParser.parseInt(null, -5));
         assertEquals(-5L, NumberParser.parseLong(null, -5L));
-        assertEquals(-5, NumberParser.parseInt("\u0661\u0662", -5));          // Arabic-Indic digits are not ASCII digits
-        assertEquals(-5L, NumberParser.parseLong("\uFF11\uFF12", -5L));        // neither are full-width digits
+        assertEquals(-5, NumberParser.parseInt("\u0661\u0662", -5));
+        assertEquals(-5L, NumberParser.parseLong("\uFF11\uFF12", -5L));
     }
 
     @Test void booleanAndDoubleParsing() {
@@ -64,7 +63,6 @@ class TextTest {
         assertEquals(-1.0, NumberParser.parseDouble(null, -1));
     }
 
-    // ---------------------------------------------------------------- Hex
     @Test void hexMatchesTheJdkAndRoundTrips() {
         Random r = new Random(42);
         HexFormat jdk = HexFormat.of();
@@ -99,8 +97,8 @@ class TextTest {
         assertEquals(1, bad.index());
         assertEquals(0, assertThrows(InvalidHexException.class, () -> Hex.fromHex("zz00")).index());
         assertEquals(2, assertThrows(InvalidHexException.class, () -> Hex.fromHex("00 1")).index());
-        assertThrows(InvalidHexException.class, () -> Hex.fromHex("\uFF11\uFF12"));   // full-width digits are rejected
-        assertThrows(IllegalArgumentException.class, () -> Hex.fromHex("xx"));        // still an IllegalArgumentException for old callers
+        assertThrows(InvalidHexException.class, () -> Hex.fromHex("\uFF11\uFF12"));
+        assertThrows(IllegalArgumentException.class, () -> Hex.fromHex("xx"));
         assertFalse(Hex.isHex("abc"));
         assertFalse(Hex.isHex("0g"));
         assertFalse(Hex.isHex(null));
@@ -108,7 +106,6 @@ class TextTest {
         assertTrue(Hex.isHex("aBcD09"));
     }
 
-    // ---------------------------------------------------------------- Strings, Padding, StringSplit
     @Test void splitMatchesTheJdkWithNegativeLimit() {
         for (String s : new String[]{"", "a", "a,b", "a,,b,", ",", ",,", ",a", "abc,def,ghi"}) {
             assertEquals(List.of(s.split(",", -1)), StringSplit.split(s, ','), "input: " + s);
@@ -145,7 +142,7 @@ class TextTest {
     }
 
     @Test void truncateNeverSplitsASurrogatePair() {
-        String s = "a\uD83D\uDE00b";                                // a, a 2-char emoji, b
+        String s = "a\uD83D\uDE00b";
         assertEquals("a", Strings.truncate(s, 2));
         assertEquals("a\uD83D\uDE00", Strings.truncate(s, 3));
         assertEquals(s, Strings.truncate(s, 4));

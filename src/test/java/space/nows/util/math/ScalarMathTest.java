@@ -9,7 +9,6 @@ import java.util.random.RandomGenerator;
 import static org.junit.jupiter.api.Assertions.*;
 
 class ScalarMathTest {
-    // ---------------------------------------------------------------- Angles, Bounds, Signs, Rounding, Modulo, Scalars
     @Test void scalarHelpers() {
         assertEquals(5, Bounds.clamp(9, 0, 5));
         assertEquals(-2, Rounding.floor(-1.5f));
@@ -34,10 +33,10 @@ class ScalarMathTest {
     }
 
     @Test void floorAndCeilSaturateInsteadOfOverflowing() {
-        assertEquals(Integer.MIN_VALUE, Rounding.floor(-3e9f));     // used to wrap around to Integer.MAX_VALUE
+        assertEquals(Integer.MIN_VALUE, Rounding.floor(-3e9f));
         assertEquals(Integer.MIN_VALUE, Rounding.floor(-3e9));
         assertEquals(Integer.MAX_VALUE, Rounding.floor(3e9f));
-        assertEquals(Integer.MAX_VALUE, Rounding.ceil(3e9f));       // used to wrap around to Integer.MIN_VALUE
+        assertEquals(Integer.MAX_VALUE, Rounding.ceil(3e9f));
         assertEquals(Integer.MAX_VALUE, Rounding.ceil(3e9));
         assertEquals(Integer.MIN_VALUE, Rounding.ceil(-3e9));
         assertEquals(0, Rounding.floor(Float.NaN));
@@ -45,7 +44,7 @@ class ScalarMathTest {
     }
 
     @Test void roundIsExactHalfUp() {
-        assertEquals(0, Rounding.round(0.49999997f));              // floor(v + 0.5f) misrounded this to 1
+        assertEquals(0, Rounding.round(0.49999997f));
         assertEquals(3, Rounding.round(2.5f));
         assertEquals(-2, Rounding.round(-2.5f));
         assertEquals(-3, Rounding.round(-2.6f));
@@ -60,7 +59,7 @@ class ScalarMathTest {
     @Test void moduloHasTheSignOfTheDivisorAndStaysInRange() {
         assertEquals(4, Modulo.mod(-1, 5));
         assertEquals(0, Modulo.mod(10, 5));
-        assertEquals(Math.floorMod(5, -3), Modulo.mod(5, -3));        // negative divisors used to give wrong answers
+        assertEquals(Math.floorMod(5, -3), Modulo.mod(5, -3));
         assertThrows(ArithmeticException.class, () -> Modulo.mod(1, 0));
         assertEquals(359f, Modulo.mod(-1f, 360f), 1e-4);
         assertEquals(0.25f, Modulo.mod(5.25f, 1f), 1e-6);
@@ -71,7 +70,7 @@ class ScalarMathTest {
             float v = Modulo.mod(a, m);
             assertTrue(v >= 0f && v < m, a + " mod " + m + " = " + v);
         }
-        float tiny = Modulo.mod(-1e-9f, 360f);                        // -1e-9 + 360 rounds to 360f; the result must still be < 360
+        float tiny = Modulo.mod(-1e-9f, 360f);
         assertTrue(tiny >= 0f && tiny < 360f);
         assertTrue(Float.isNaN(Modulo.mod(Float.NaN, 5f)));
         assertThrows(IllegalArgumentException.class, () -> Modulo.mod(1f, 0f));
@@ -79,7 +78,6 @@ class ScalarMathTest {
         assertThrows(IllegalArgumentException.class, () -> Modulo.mod(1f, Float.NaN));
     }
 
-    // ---------------------------------------------------------------- Interpolation / PowersOfTwo
     @Test void interpolation() {
         assertEquals(15f, Interpolation.lerp(10f, 20f, 0.5f), 1e-6);
         assertEquals(0.5f, Interpolation.inverseLerp(10f, 20f, 15f), 1e-6);
@@ -90,8 +88,8 @@ class ScalarMathTest {
 
     @Test void remapAndAngles() {
         assertEquals(150f, Interpolation.remap(5f, 0f, 10f, 100f, 200f), 1e-4);
-        assertEquals(100f, Interpolation.remap(5f, 3f, 3f, 100f, 200f), 1e-4);          // degenerate input range -> outMin, no NaN
-        assertEquals(0f, Interpolation.lerpAngle(0.1f, Angles.TWO_PI - 0.1f, 0.5f), 1e-5);   // goes the short way round
+        assertEquals(100f, Interpolation.remap(5f, 3f, 3f, 100f, 200f), 1e-4);
+        assertEquals(0f, Interpolation.lerpAngle(0.1f, Angles.TWO_PI - 0.1f, 0.5f), 1e-5);
         assertEquals(1f, Interpolation.lerpAngle(1f, 1f, 0.7f), 1e-6);
         assertEquals(0.5f, Interpolation.lerpAngle(0f, 1f, 0.5f), 1e-6);
     }
@@ -121,7 +119,6 @@ class ScalarMathTest {
         assertThrows(ArithmeticException.class, () -> PowersOfTwo.alignUp(Integer.MAX_VALUE, 2));
     }
 
-    // ---------------------------------------------------------------- FastTrig
     @Test void trigTableStaysCloseToMath() {
         double worst = 0;
         for (float x = -100f; x <= 100f; x += 0.01f) {
@@ -145,7 +142,6 @@ class ScalarMathTest {
         assertDoesNotThrow(() -> FastTrig.cos(-1e6f));
     }
 
-    // ---------------------------------------------------------------- FastRandom
     @Test void sameSeedSameSequenceAndCopiesContinueIdentically() {
         FastRandom a = new FastRandom(123), b = new FastRandom(123);
         for (int i = 0; i < 100; i++) assertEquals(a.nextLong(), b.nextLong());
@@ -192,7 +188,7 @@ class ScalarMathTest {
     @Test void intRangesWiderThanIntMaxValueDoNotOverflow() {
         FastRandom r = new FastRandom(9);
         for (int i = 0; i < 20_000; i++) {
-            int v = r.nextInt(-1_500_000_000, 1_500_000_000);           // range 3e9 > Integer.MAX_VALUE: used to throw "bound must be positive"
+            int v = r.nextInt(-1_500_000_000, 1_500_000_000);
             assertTrue(v >= -1_500_000_000 && v < 1_500_000_000);
             int w = r.nextInt(Integer.MIN_VALUE, Integer.MAX_VALUE);
             assertTrue(w < Integer.MAX_VALUE);
@@ -226,7 +222,7 @@ class ScalarMathTest {
         assertThrows(IllegalArgumentException.class, () -> r.nextFloat(1f, 1f));
         assertThrows(IllegalArgumentException.class, () -> r.nextFloat(2f, 1f));
         assertThrows(IllegalArgumentException.class, () -> r.nextFloat(Float.NaN, 1f));
-        assertThrows(IllegalArgumentException.class, () -> r.nextFloat(-Float.MAX_VALUE, Float.MAX_VALUE));   // range overflows to infinity
+        assertThrows(IllegalArgumentException.class, () -> r.nextFloat(-Float.MAX_VALUE, Float.MAX_VALUE));
     }
 
     @Test void nextBytesFillsEveryLength() {

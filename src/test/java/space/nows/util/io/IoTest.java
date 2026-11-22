@@ -18,7 +18,6 @@ import java.util.Random;
 import static org.junit.jupiter.api.Assertions.*;
 
 class IoTest {
-    // ---------------------------------------------------------------- ByteAccess
     @Test void byteAccess() {
         byte[] b = new byte[16];
         ByteAccess.writeInt(b, 0, 0x01020304);
@@ -36,7 +35,6 @@ class IoTest {
         assertThrows(IndexOutOfBoundsException.class, () -> ByteAccess.readShort(new byte[8], 7));
     }
 
-    // ---------------------------------------------------------------- ByteBuf vs java.nio.ByteBuffer
     @Test void byteBufMatchesByteBufferUnderRandomWrites() {
         Random r = new Random(31);
         for (int round = 0; round < 50; round++) {
@@ -109,7 +107,7 @@ class IoTest {
         assertThrows(IndexOutOfBoundsException.class, () -> buf.writeBytes(new byte[4], -1, 1));
         assertThrows(IndexOutOfBoundsException.class, () -> buf.writeBytes(new byte[4], 0, -1));
         assertThrows(NullPointerException.class, () -> buf.writeBytes(null));
-        assertEquals(before, buf.writerIndex());                  // a rejected write changes nothing
+        assertEquals(before, buf.writerIndex());
         assertThrows(IllegalArgumentException.class, () -> buf.readBytes(-1));
         assertThrows(IllegalArgumentException.class, () -> buf.skip(-1));
         assertThrows(IndexOutOfBoundsException.class, () -> buf.readBytes(new byte[2], 1, 2));
@@ -123,7 +121,7 @@ class IoTest {
         ByteBuf buf = new ByteBuf(src);
         assertEquals(3, buf.readableBytes());
         assertEquals(1, buf.readByte());
-        buf.writeBytes(new byte[100]);                            // forces a reallocation; the wrapped array is not corrupted
+        buf.writeBytes(new byte[100]);
         assertArrayEquals(new byte[]{1, 2, 3}, src);
         assertEquals(102, buf.readableBytes());
         assertTrue(buf.capacity() >= 103);
@@ -139,7 +137,7 @@ class IoTest {
         assertEquals(0, buf.readerIndex());
         assertEquals(3, buf.writerIndex());
         assertArrayEquals(new byte[]{3, 4, 5}, buf.toByteArray());
-        assertEquals(3, buf.readableBytes());                     // toByteArray does not consume
+        assertEquals(3, buf.readableBytes());
         buf.readerIndex(1);
         assertEquals(4, buf.readByte());
         buf.reset();
@@ -156,7 +154,7 @@ class IoTest {
         assertEquals(0, buf.writeUtf8(""));
         assertEquals("", buf.readUtf8(0));
         assertThrows(NullPointerException.class, () -> buf.writeUtf8(null));
-        buf.writeByte(0xFF);                                       // malformed UTF-8 decodes to U+FFFD instead of throwing
+        buf.writeByte(0xFF);
         assertEquals("\uFFFD", buf.readUtf8(1));
     }
 
@@ -169,23 +167,22 @@ class IoTest {
         assertEquals(3, view.remaining());
         assertEquals(8, view.get());
         assertThrows(java.nio.ReadOnlyBufferException.class, () -> view.put((byte) 1));
-        assertEquals(3, buf.readableBytes());                     // creating the view consumed nothing
+        assertEquals(3, buf.readableBytes());
 
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         assertEquals(3, buf.writeTo(out));
         assertArrayEquals(new byte[]{8, 7, 6}, out.toByteArray());
-        assertEquals(0, buf.readableBytes());                     // writeTo consumes
+        assertEquals(0, buf.readableBytes());
 
         ByteBuf in = new ByteBuf();
         in.readFrom(new ByteArrayInputStream(new byte[]{1, 2, 3, 4}), 3);
         assertArrayEquals(new byte[]{1, 2, 3}, in.toByteArray());
         ByteBuf shortRead = new ByteBuf();
         assertThrows(EOFException.class, () -> shortRead.readFrom(new ByteArrayInputStream(new byte[2]), 5));
-        assertEquals(0, shortRead.readableBytes());               // nothing appended on failure
+        assertEquals(0, shortRead.readableBytes());
         assertThrows(IllegalArgumentException.class, () -> shortRead.readFrom(new ByteArrayInputStream(new byte[2]), -1));
     }
 
-    // ---------------------------------------------------------------- Streams, FileIO
     @Test void copyRejectsABufferThatWouldSpinForever() throws IOException {
         byte[] data = new byte[1000];
         new Random(1).nextBytes(data);
@@ -236,7 +233,6 @@ class IoTest {
         Streams.closeQuietly(() -> { throw new IllegalStateException("boom"); });
     }
 
-    // ---------------------------------------------------------------- Gzip
     @Test void gzipRoundTrip() throws IOException {
         byte[] data = new byte[10_000];
         new Random(2).nextBytes(data);
@@ -250,7 +246,7 @@ class IoTest {
     @Test void gunzipWithALimitStopsDecompressionBombs() throws IOException {
         byte[] zeros = new byte[2_000_000];
         byte[] bomb = Gzip.gzip(zeros);
-        assertTrue(bomb.length < 10_000);                          // tiny on the wire, huge when expanded
+        assertTrue(bomb.length < 10_000);
         CapacityExceededException e = assertThrows(CapacityExceededException.class, () -> Gzip.gunzip(bomb, 1000));
         assertEquals(1000, e.limit());
         assertEquals(zeros.length, Gzip.gunzip(bomb, zeros.length).length);

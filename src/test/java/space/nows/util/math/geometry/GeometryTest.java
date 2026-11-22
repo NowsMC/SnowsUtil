@@ -15,23 +15,23 @@ class GeometryTest {
     }
 
     @Test void segmentIntersection() {
-        assertTrue(SegmentIntersection.segmentsIntersect(0, 0, 4, 4, 0, 4, 4, 0));          // proper crossing (X)
-        assertFalse(SegmentIntersection.segmentsIntersect(0, 0, 4, 0, 0, 1, 4, 1));         // parallel
-        assertTrue(SegmentIntersection.segmentsIntersect(0, 0, 2, 2, 2, 2, 4, 0));          // touch at an endpoint
-        assertTrue(SegmentIntersection.segmentsIntersect(0, 0, 4, 0, 2, 0, 6, 0));          // collinear overlap
-        assertFalse(SegmentIntersection.segmentsIntersect(0, 0, 1, 0, 2, 0, 3, 0));         // collinear, disjoint
-        assertTrue(SegmentIntersection.segmentsIntersect(0, 0, 4, 0, 2, 0, 2, 3));          // T junction
-        assertFalse(SegmentIntersection.segmentsIntersect(0, 0, 1, 1, 2, 0, 3, 1));         // would cross if extended, but does not
-        assertTrue(SegmentIntersection.segmentsIntersect(1, 1, 1, 1, 0, 0, 2, 2));          // degenerate point on a segment
-        assertFalse(SegmentIntersection.segmentsIntersect(5, 5, 5, 5, 0, 0, 2, 2));         // degenerate point off a segment
-        assertEquals(SegmentIntersection.segmentsIntersect(0, 0, 4, 4, 0, 4, 4, 0), SegmentIntersection.segmentsIntersect(4, 0, 0, 4, 4, 4, 0, 0));   // symmetric
+        assertTrue(SegmentIntersection.segmentsIntersect(0, 0, 4, 4, 0, 4, 4, 0));
+        assertFalse(SegmentIntersection.segmentsIntersect(0, 0, 4, 0, 0, 1, 4, 1));
+        assertTrue(SegmentIntersection.segmentsIntersect(0, 0, 2, 2, 2, 2, 4, 0));
+        assertTrue(SegmentIntersection.segmentsIntersect(0, 0, 4, 0, 2, 0, 6, 0));
+        assertFalse(SegmentIntersection.segmentsIntersect(0, 0, 1, 0, 2, 0, 3, 0));
+        assertTrue(SegmentIntersection.segmentsIntersect(0, 0, 4, 0, 2, 0, 2, 3));
+        assertFalse(SegmentIntersection.segmentsIntersect(0, 0, 1, 1, 2, 0, 3, 1));
+        assertTrue(SegmentIntersection.segmentsIntersect(1, 1, 1, 1, 0, 0, 2, 2));
+        assertFalse(SegmentIntersection.segmentsIntersect(5, 5, 5, 5, 0, 0, 2, 2));
+        assertEquals(SegmentIntersection.segmentsIntersect(0, 0, 4, 4, 0, 4, 4, 0), SegmentIntersection.segmentsIntersect(4, 0, 0, 4, 4, 4, 0, 0));
     }
 
     @Test void polygonQueries() {
         assertTrue(Polygons.pointInPolygon(2, 2, SQUARE_CCW));
         assertFalse(Polygons.pointInPolygon(5, 2, SQUARE_CCW));
         assertTrue(Polygons.pointInPolygon(1, 3, L_SHAPE));
-        assertFalse(Polygons.pointInPolygon(3, 3, L_SHAPE));                          // inside the notch of the L
+        assertFalse(Polygons.pointInPolygon(3, 3, L_SHAPE));
         assertFalse(Polygons.pointInPolygon(1, 1, new float[0]));
         assertEquals(16f, Polygons.polygonArea(SQUARE_CCW), 1e-6);
         assertEquals(-16f, Polygons.polygonArea(SQUARE_CW), 1e-6);
@@ -41,14 +41,14 @@ class GeometryTest {
         assertFalse(Polygons.isCounterClockwise(SQUARE_CW));
         assertEquals(16f, Polygons.perimeter(SQUARE_CCW), 1e-5);
         assertEquals(0f, Polygons.perimeter(new float[]{1, 1}), 1e-6);
-        assertEquals(8f, Polygons.perimeter(new float[]{0, 0, 4, 0}), 1e-5);          // a 2-gon is a segment traversed twice
+        assertEquals(8f, Polygons.perimeter(new float[]{0, 0, 4, 0}), 1e-5);
     }
 
     @Test void convexity() {
         assertTrue(Polygons.isConvex(SQUARE_CCW));
         assertTrue(Polygons.isConvex(SQUARE_CW));
         assertFalse(Polygons.isConvex(L_SHAPE));
-        assertTrue(Polygons.isConvex(new float[]{0, 0, 2, 0, 4, 0, 4, 4}));           // a collinear vertex is allowed
+        assertTrue(Polygons.isConvex(new float[]{0, 0, 2, 0, 4, 0, 4, 4}));
         assertFalse(Polygons.isConvex(new float[]{0, 0, 1, 1}));
         assertFalse(Polygons.isConvex(new float[0]));
     }

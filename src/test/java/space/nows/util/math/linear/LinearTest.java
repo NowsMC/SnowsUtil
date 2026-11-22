@@ -31,7 +31,6 @@ class LinearTest {
         assertEquals(1f, d.y, 1e-5);
     }
 
-    // ---------------------------------------------------------------- Mat4
     @Test void inverseTimesOriginalIsIdentityForRandomTransforms() {
         FastRandom rnd = new FastRandom(61);
         for (int i = 0; i < 500; i++) {
@@ -56,7 +55,7 @@ class LinearTest {
 
     @Test void inverseNeedsPivotingToHandleAZeroOnTheDiagonal() {
         Mat4 swap = new Mat4();
-        swap.set(0, 0, 0f).set(1, 1, 0f).set(0, 1, 1f).set(1, 0, 1f);   // swaps x and y; m[0][0] == 0
+        swap.set(0, 0, 0f).set(1, 1, 0f).set(0, 1, 1f).set(1, 0, 1f);
         Mat4 inv = Mat4Inverse.invert(swap.copy());
         Mat4 prod = new Mat4();
         Mat4.multiply(swap, inv, prod);
@@ -88,7 +87,7 @@ class LinearTest {
         m.set(2, 3, 9f);
         assertEquals(9f, m.get(2, 3));
         assertEquals(1f, m.get(3, 3));
-        assertThrows(IndexOutOfBoundsException.class, () -> m.get(4, 0));      // used to silently return m[4]
+        assertThrows(IndexOutOfBoundsException.class, () -> m.get(4, 0));
         assertThrows(IndexOutOfBoundsException.class, () -> m.get(0, 4));
         assertThrows(IndexOutOfBoundsException.class, () -> m.get(-1, 0));
         assertThrows(IndexOutOfBoundsException.class, () -> m.get(0, -1));
@@ -120,14 +119,13 @@ class LinearTest {
         assertNotSame(a, b);
         b.set(0, 0, 2f);
         assertNotEquals(a, b);
-        assertEquals(1f, a.get(0, 0));                                        // the copy is independent
+        assertEquals(1f, a.get(0, 0));
         assertNotEquals(a, null);
         assertNotEquals(a, "x");
     }
 
-    // ---------------------------------------------------------------- Quaternion
     @Test void quaternionInverse() {
-        Quaternion q = new Quaternion(1f, 2f, 3f, 4f);            // deliberately not unit length
+        Quaternion q = new Quaternion(1f, 2f, 3f, 4f);
         Quaternion inv = q.copy().invert();
         Quaternion prod = q.copy().multiply(inv);
         assertEquals(0f, prod.x, 1e-6);
