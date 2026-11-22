@@ -3,7 +3,7 @@ package space.nows.util.math.linear;
 import org.junit.jupiter.api.Test;
 import space.nows.util.error.SingularMatrixException;
 import space.nows.util.math.Angles;
-import space.nows.util.math.FastRandom;
+import space.nows.util.random.FastRandom;
 
 import static org.junit.jupiter.api.Assertions.*;
 
