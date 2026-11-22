@@ -6,11 +6,11 @@
 
   <groupId>space.nows</groupId>
   <artifactId>snowsutil</artifactId>
-  <version>0.1.0-SNAPSHOT</version>
+  <version>1.0.0</version>
   <packaging>jar</packaging>
 
   <name>Snows Util</name>
-  <description>Low-allocation Java utility library: primitive collections, fast math, array/byte/bit helpers, I/O, text and concurrency utilities.</description>
+  <description>Low-allocation Java utility library: primitive collections, fast math, array/byte/bit helpers, I/O, hashing, text, random, concurrency and small networking utilities.</description>
   <url>https://nows.space/</url>
 
   <organization>
