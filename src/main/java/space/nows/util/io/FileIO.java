@@ -15,11 +15,9 @@ import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.nio.file.StandardOpenOption;
 
-/** Whole-file and ranged reads and writes as byte arrays, plus read-only memory mapping. */
+/** Bounded and ranged file reads, read-only memory mapping and atomic writes. */
 public final class FileIO {
     private FileIO() {}
-
-    public static byte[] readFile(Path path) throws IOException { return Files.readAllBytes(Preconditions.notNull(path, "path")); }
 
     /** Reads the whole file, failing with {@link CapacityExceededException} instead of buffering more than {@code maxBytes}. */
     public static byte[] readFile(Path path, int maxBytes) throws IOException {
@@ -59,10 +57,6 @@ public final class FileIO {
             if (size > Integer.MAX_VALUE) throw new CapacityExceededException("mapped file", size, Integer.MAX_VALUE);
             return ch.map(FileChannel.MapMode.READ_ONLY, 0, size);
         }
-    }
-
-    public static void writeFile(Path path, byte[] data) throws IOException {
-        Files.write(Preconditions.notNull(path, "path"), Preconditions.notNull(data, "data"));
     }
 
     /**

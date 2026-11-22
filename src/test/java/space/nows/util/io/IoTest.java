@@ -207,7 +207,7 @@ class IoTest {
         assertEquals(0, Streams.readAll(new ByteArrayInputStream(new byte[0]), 0).length);
         assertThrows(CapacityExceededException.class, () -> Streams.readAll(new ByteArrayInputStream(ten), 0));
         assertThrows(IllegalArgumentException.class, () -> Streams.readAll(new ByteArrayInputStream(ten), -1));
-        assertEquals(10, Streams.readAll(new ByteArrayInputStream(ten)).length);
+        assertEquals(10, new ByteArrayInputStream(ten).readAllBytes().length);
     }
 
     @Test void readExactly() throws IOException {
@@ -222,13 +222,13 @@ class IoTest {
     @Test void filesAndCloseQuietly() throws IOException {
         Path p = Files.createTempFile("snowsutil", ".bin");
         try {
-            FileIO.writeFile(p, new byte[]{1, 2, 3});
-            assertArrayEquals(new byte[]{1, 2, 3}, FileIO.readFile(p));
+            Files.write(p, new byte[]{1, 2, 3});
+            assertArrayEquals(new byte[]{1, 2, 3}, Files.readAllBytes(p));
         } finally {
             Files.deleteIfExists(p);
         }
-        assertThrows(NullPointerException.class, () -> FileIO.readFile(null));
-        assertThrows(NullPointerException.class, () -> FileIO.writeFile(Path.of("x"), null));
+        assertThrows(NullPointerException.class, () -> FileIO.readFile(null, 10));
+        assertThrows(NullPointerException.class, () -> FileIO.writeFileAtomic(Path.of("x"), null));
         Streams.closeQuietly(null);
         Streams.closeQuietly(() -> { throw new IllegalStateException("boom"); });
     }

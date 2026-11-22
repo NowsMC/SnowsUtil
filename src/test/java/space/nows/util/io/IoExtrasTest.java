@@ -108,18 +108,18 @@ class IoExtrasTest {
         byte[] data = new byte[5000];
         new Random(2).nextBytes(data);
         FileIO.writeFileAtomic(file, data);
-        assertArrayEquals(data, FileIO.readFile(file));
+        assertArrayEquals(data, Files.readAllBytes(file));
         assertArrayEquals(data, FileIO.readFile(file, 5000));
         assertThrows(CapacityExceededException.class, () -> FileIO.readFile(file, 4999));
         assertArrayEquals(java.util.Arrays.copyOfRange(data, 100, 612), FileIO.readRange(file, 100, 512));
         assertThrows(EOFException.class, () -> FileIO.readRange(file, 4990, 20));
         assertEquals(0, FileIO.readRange(file, 0, 0).length);
         FileIO.writeFileAtomic(file, new byte[] {1, 2, 3});
-        assertArrayEquals(new byte[] {1, 2, 3}, FileIO.readFile(file));
+        assertArrayEquals(new byte[] {1, 2, 3}, Files.readAllBytes(file));
         try (var files = Files.list(dir)) {
             assertEquals(1, files.count());
         }
-        FileIO.writeFile(file, data);
+        Files.write(file, data);
         MappedByteBuffer mapped = FileIO.mapReadOnly(file);
         assertEquals(5000, mapped.remaining());
         assertTrue(mapped.isReadOnly());

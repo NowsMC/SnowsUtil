@@ -12,8 +12,6 @@ import java.io.OutputStream;
 public final class Streams {
     private Streams() {}
 
-    public static byte[] readAll(InputStream in) throws IOException { return Preconditions.notNull(in, "in").readAllBytes(); }
-
     /** Reads the whole stream, but fails with {@link CapacityExceededException} instead of buffering more than {@code maxBytes}. */
     public static byte[] readAll(InputStream in, int maxBytes) throws IOException {
         Preconditions.notNull(in, "in");
