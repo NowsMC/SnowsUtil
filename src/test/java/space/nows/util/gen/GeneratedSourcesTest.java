@@ -11,13 +11,13 @@ import java.util.Map;
 import static org.junit.jupiter.api.Assertions.*;
 
 class GeneratedSourcesTest {
-    @Test void generatedCollectionsMatchTheTemplates() throws IOException {
+    @Test void generatedSourcesMatchTheTemplates() throws IOException {
         Path root = Path.of("src", "main", "java");
-        for (Map.Entry<String, String> e : CollectionGenerator.generate().entrySet()) {
+        for (Map.Entry<String, String> e : SourceGenerator.generate().entrySet()) {
             Path file = root.resolve(e.getKey());
             assertTrue(Files.exists(file), "missing generated file " + file);
             String actual = Files.readString(file, StandardCharsets.UTF_8).replace("\r\n", "\n");
-            assertEquals(e.getValue(), actual, file + " is stale; run CollectionGenerator");
+            assertEquals(e.getValue(), actual, file + " is stale; run SourceGenerator");
         }
     }
 }

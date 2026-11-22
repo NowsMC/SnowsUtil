@@ -19,14 +19,20 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * Generates the primitive-specialized collections in {@code space.nows.util.collections} from the templates in
- * {@code src/test/resources/templates}. Run {@code main} with the source root as the only argument (default
- * {@code src/main/java}) after editing a template; {@code GeneratedSourcesTest} fails while the two disagree.
+ * Generates the primitive-specialized collections in {@code space.nows.util.collections} and the typed array
+ * helpers in {@code space.nows.util.array} from the templates in {@code src/test/resources/templates}. Run
+ * {@code main} with the source root as the only argument (default {@code src/main/java}) after editing a template;
+ * {@code GeneratedSourcesTest} fails while the two disagree.
+ *
+ * <p>Template lines starting with {@code #if FLAG}, {@code #else} and {@code #end} select text, and
+ * {@code #for byte,int,long,T} ... {@code #endfor} repeats a block once per element kind, where {@code T} is the
+ * generic object kind.
  */
-public final class CollectionGenerator {
-    private CollectionGenerator() {}
+public final class SourceGenerator {
+    private SourceGenerator() {}
 
     private static final String PACKAGE_PATH = "space/nows/util/collections/";
+    private static final String ARRAY_PATH = "space/nows/util/array/";
     private static final Pattern MACRO = Pattern.compile("@(HASH|KEQ|KHASH|VHASH|VNE)\\(([^()]*)\\)");
     private static final Pattern TOKEN = Pattern.compile("\\$([A-Z_]+)\\$");
     private static final Pattern TOKEN_ONLY_LINE = Pattern.compile("^\\s*(\\$[A-Z_]+\\$|@NNKEY)\\s*$");
@@ -74,6 +80,9 @@ public final class CollectionGenerator {
         for (Kind k : new Kind[] {Kind.INT, Kind.LONG}) {
             out.put(PACKAGE_PATH + k.name + "HashSet.java", renderSet(setTemplate, k));
             out.put(PACKAGE_PATH + k.name + "List.java", renderList(listTemplate, k));
+        }
+        for (String name : new String[] {"ArrayCapacity", "ArrayEdit", "ArrayOrder", "ArrayReorder", "ArraySearch"}) {
+            out.put(ARRAY_PATH + name + ".java", render(template(name + ".tpl"), Map.of(), Set.of(), Kind.INT, Kind.INT));
         }
         return out;
     }
@@ -180,18 +189,32 @@ public final class CollectionGenerator {
 
     private static String render(String template, Map<String, String> tokens, Set<String> flags, Kind k, Kind v) {
         List<String> out = new ArrayList<>();
+        renderLines(List.of(template.split("\n", -1)), tokens, flags, k, v, out);
+        String text = String.join("\n", out);
+        return text.endsWith("\n") ? text : text + "\n";
+    }
+
+    private static void renderLines(List<String> lines, Map<String, String> tokens, Set<String> flags, Kind k, Kind v, List<String> out) {
         Deque<Boolean> active = new ArrayDeque<>();
         active.push(true);
-        for (String line : template.split("\n", -1)) {
+        for (int i = 0; i < lines.size(); i++) {
+            String line = lines.get(i);
             String trimmed = line.trim();
+            if (trimmed.startsWith("#for ")) {
+                int end = i + 1;
+                while (!lines.get(end).trim().equals("#endfor")) end++;
+                if (active.peek()) expandLoop(trimmed.substring(5).trim(), lines.subList(i + 1, end), tokens, flags, k, v, out);
+                i = end;
+                continue;
+            }
             if (trimmed.startsWith("#if ")) {
                 active.push(active.peek() && flags.contains(trimmed.substring(4).trim()));
                 continue;
             }
             if (trimmed.equals("#else")) {
-                boolean cur = active.pop();
+                boolean current = active.pop();
                 boolean parent = active.peek();
-                active.push(parent && !cur);
+                active.push(parent && !current);
                 continue;
             }
             if (trimmed.equals("#end")) {
@@ -203,8 +226,32 @@ public final class CollectionGenerator {
             if (TOKEN_ONLY_LINE.matcher(line).matches() && expanded.isBlank()) continue;
             out.add(expanded);
         }
-        String text = String.join("\n", out);
-        return text.endsWith("\n") ? text : text + "\n";
+    }
+
+    private static void expandLoop(String kinds, List<String> body, Map<String, String> tokens, Set<String> flags, Kind k, Kind v, List<String> out) {
+        boolean first = true;
+        for (String kind : kinds.split(",")) {
+            if (!first) out.add("");
+            first = false;
+            Map<String, String> t = new LinkedHashMap<>(tokens);
+            Set<String> f = new TreeSet<>(flags);
+            switch (kind.trim()) {
+                case "byte", "int", "long" -> {
+                    t.put("E", kind.trim());
+                    t.put("ARR", kind.trim() + "[]");
+                    t.put("GEN", "");
+                    f.add("PRIM");
+                }
+                case "T" -> {
+                    t.put("E", "T");
+                    t.put("ARR", "T[]");
+                    t.put("GEN", "<T> ");
+                    f.add("OBJ");
+                }
+                default -> throw new IllegalStateException("unknown loop kind " + kind);
+            }
+            renderLines(body, t, f, k, v, out);
+        }
     }
 
     private static String expand(String line, Map<String, String> tokens, Kind k, Kind v) {
@@ -233,7 +280,7 @@ public final class CollectionGenerator {
     }
 
     private static String template(String name) {
-        try (InputStream in = CollectionGenerator.class.getResourceAsStream("/templates/" + name)) {
+        try (InputStream in = SourceGenerator.class.getResourceAsStream("/templates/" + name)) {
             if (in == null) throw new IllegalStateException("missing template " + name);
             return new String(in.readAllBytes(), StandardCharsets.UTF_8).replace("\r\n", "\n");
         } catch (IOException e) {
