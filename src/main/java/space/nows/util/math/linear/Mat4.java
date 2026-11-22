@@ -1,6 +1,14 @@
 package space.nows.util.math.linear;
 
+import space.nows.util.error.Checks;
+import space.nows.util.error.SingularMatrixException;
+
+import java.util.Arrays;
+
+/** 4x4 float matrix in column-major order ({@code m[col * 4 + row]}). Mutating methods return {@code this}. */
 public final class Mat4 {
+    private static final double SINGULAR_EPSILON = 1e-12;
+
     public final float[] m = new float[16];
 
     public Mat4() { identity(); }
@@ -13,7 +21,13 @@ public final class Mat4 {
 
     public Mat4 set(Mat4 o) { System.arraycopy(o.m, 0, m, 0, 16); return this; }
 
-    public float get(int row, int col) { return m[col * 4 + row]; }
+    /** @throws IndexOutOfBoundsException unless {@code row} and {@code col} are in {@code [0, 4)} */
+    public float get(int row, int col) { return m[Checks.index(col, 4) * 4 + Checks.index(row, 4)]; }
+
+    public Mat4 set(int row, int col, float value) {
+        m[Checks.index(col, 4) * 4 + Checks.index(row, 4)] = value;
+        return this;
+    }
 
     public Mat4 setTranslation(float tx, float ty, float tz) {
         identity();
@@ -45,6 +59,13 @@ public final class Mat4 {
     }
 
     public Mat4 setPerspective(float fovYRadians, float aspect, float near, float far) {
+        if (!(fovYRadians > 0f && fovYRadians < (float) Math.PI)) {
+            throw new IllegalArgumentException("fovYRadians must be in (0, PI) but was " + fovYRadians);
+        }
+        if (!(aspect > 0f && Float.isFinite(aspect))) throw new IllegalArgumentException("aspect must be finite and > 0 but was " + aspect);
+        if (!(near > 0f && far > near && Float.isFinite(far))) {
+            throw new IllegalArgumentException("need 0 < near < far (finite) but was near=" + near + ", far=" + far);
+        }
         float f = 1f / (float) Math.tan(fovYRadians * 0.5f);
         java.util.Arrays.fill(m, 0f);
         m[0] = f / aspect;
@@ -56,6 +77,10 @@ public final class Mat4 {
     }
 
     public Mat4 setOrtho(float left, float right, float bottom, float top, float near, float far) {
+        if (!(left != right && bottom != top && near != far)
+                || !Float.isFinite(right - left) || !Float.isFinite(top - bottom) || !Float.isFinite(far - near)) {
+            throw new IllegalArgumentException("ortho volume must have finite, non-zero extent on every axis");
+        }
         identity();
         m[0] = 2f / (right - left);
         m[5] = 2f / (top - bottom);
@@ -136,4 +161,49 @@ public final class Mat4 {
         }
         return sb.append(']').toString();
     }
+
+    /**
+     * Inverts this matrix in place (Gauss-Jordan with partial pivoting, computed in double precision).
+     * If the matrix is singular it is left unchanged.
+     *
+     * @throws SingularMatrixException if a pivot is zero, NaN or smaller than 1e-12
+     */
+    public Mat4 invert() {
+        double[] a = new double[32];                    // [ M | I ], row-major, 8 columns
+        for (int r = 0; r < 4; r++) {
+            for (int c = 0; c < 4; c++) a[r * 8 + c] = m[c * 4 + r];
+            a[r * 8 + 4 + r] = 1.0;
+        }
+        for (int col = 0; col < 4; col++) {
+            int pivot = col;
+            double best = Math.abs(a[col * 8 + col]);
+            for (int r = col + 1; r < 4; r++) {
+                double v = Math.abs(a[r * 8 + col]);
+                if (v > best) { best = v; pivot = r; }
+            }
+            if (!(best > SINGULAR_EPSILON)) {
+                throw new SingularMatrixException("matrix is singular (pivot " + best + " in column " + col + ")");
+            }
+            if (pivot != col) {
+                for (int k = 0; k < 8; k++) {
+                    double t = a[pivot * 8 + k]; a[pivot * 8 + k] = a[col * 8 + k]; a[col * 8 + k] = t;
+                }
+            }
+            double inv = 1.0 / a[col * 8 + col];
+            for (int k = 0; k < 8; k++) a[col * 8 + k] *= inv;
+            for (int r = 0; r < 4; r++) {
+                if (r == col) continue;
+                double f = a[r * 8 + col];
+                if (f != 0.0) for (int k = 0; k < 8; k++) a[r * 8 + k] -= f * a[col * 8 + k];
+            }
+        }
+        for (int r = 0; r < 4; r++) for (int c = 0; c < 4; c++) m[c * 4 + r] = (float) a[r * 8 + 4 + c];
+        return this;
+    }
+
+    public Mat4 copy() { return new Mat4().set(this); }
+
+    @Override public boolean equals(Object o) { return o instanceof Mat4 other && Arrays.equals(m, other.m); }
+
+    @Override public int hashCode() { return Arrays.hashCode(m); }
 }

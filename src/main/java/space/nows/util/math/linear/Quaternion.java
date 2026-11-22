@@ -1,5 +1,7 @@
 package space.nows.util.math.linear;
 
+import space.nows.util.error.SingularMatrixException;
+
 public final class Quaternion {
     public float x, y, z, w = 1f;
 
@@ -70,4 +72,30 @@ public final class Quaternion {
     public Quaternion copy() { return new Quaternion(x, y, z, w); }
 
     @Override public String toString() { return "Quaternion(" + x + ", " + y + ", " + z + ", " + w + ")"; }
+
+    public float length() { return (float) Math.sqrt(lengthSq()); }
+
+    /**
+     * Replaces this quaternion with its multiplicative inverse (conjugate divided by the squared length).
+     *
+     * @throws SingularMatrixException if the quaternion has zero (or NaN) length
+     */
+    public Quaternion invert() {
+        float n = lengthSq();
+        if (!(n > 0f)) throw new SingularMatrixException("cannot invert a quaternion of length " + length());
+        float inv = 1f / n;
+        return set(-x * inv, -y * inv, -z * inv, w * inv);
+    }
+
+    @Override public boolean equals(Object o) {
+        return o instanceof Quaternion q && Float.compare(x, q.x) == 0 && Float.compare(y, q.y) == 0
+                && Float.compare(z, q.z) == 0 && Float.compare(w, q.w) == 0;
+    }
+
+    @Override public int hashCode() {
+        int h = Float.hashCode(x);
+        h = 31 * h + Float.hashCode(y);
+        h = 31 * h + Float.hashCode(z);
+        return 31 * h + Float.hashCode(w);
+    }
 }

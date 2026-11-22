@@ -1,11 +1,24 @@
 package space.nows.util.math;
 
-public final class FastRandom {
+import space.nows.util.error.Checks;
+
+import java.util.random.RandomGenerator;
+
+/**
+ * Small, fast, seedable xorshift128+ generator. Implements the JDK's {@link RandomGenerator}, so it also provides
+ * {@code ints()}, {@code doubles()}, bounded {@code nextLong}, etc. Not thread-safe and not cryptographically secure.
+ */
+public final class FastRandom implements RandomGenerator {
     private long s0, s1;
 
     public FastRandom() { this(System.nanoTime() ^ 0x5DEECE66DL); }
 
     public FastRandom(long seed) { setSeed(seed); }
+
+    private FastRandom(long s0, long s1) { this.s0 = s0; this.s1 = s1; }
+
+    /** Independent generator that continues with the same sequence. */
+    public FastRandom copy() { return new FastRandom(s0, s1); }
 
     public void setSeed(long seed) {
         long z = seed;
@@ -20,7 +33,7 @@ public final class FastRandom {
         return z ^ (z >>> 31);
     }
 
-    public long nextLong() {
+    @Override public long nextLong() {
         long x = s0, y = s1;
         s0 = y;
         x ^= x << 23;
@@ -28,32 +41,46 @@ public final class FastRandom {
         return s1 + y;
     }
 
-    public int nextInt() { return (int) (nextLong() >>> 32); }
+    @Override public int nextInt() { return (int) (nextLong() >>> 32); }
 
-    public int nextInt(int bound) {
-        if (bound <= 0) throw new IllegalArgumentException("bound must be positive");
+    @Override public int nextInt(int bound) {
+        if (bound <= 0) throw new IllegalArgumentException("bound must be positive: " + bound);
         return (int) (((nextLong() >>> 32) * bound) >>> 32);
     }
 
-    public int nextInt(int min, int max) {
-        if (min >= max) throw new IllegalArgumentException("min >= max");
-        return min + nextInt(max - min);
+    /** Uniform in {@code [min, max)}; any range up to the full {@code int} span is supported (no overflow). */
+    @Override public int nextInt(int min, int max) {
+        if (min >= max) throw new IllegalArgumentException("min >= max: " + min + " >= " + max);
+        long range = (long) max - min;
+        if (range <= Integer.MAX_VALUE) return min + nextInt((int) range);
+        int r;
+        do { r = nextInt(); } while (r < min || r >= max);   // accepts more than half of all ints here
+        return r;
     }
 
-    public boolean nextBoolean() { return nextLong() < 0; }
+    @Override public boolean nextBoolean() { return nextLong() < 0; }
 
-    public float nextFloat() { return (nextLong() >>> 40) * 0x1.0p-24f; }
+    @Override public float nextFloat() { return (nextLong() >>> 40) * 0x1.0p-24f; }
 
-    public double nextDouble() { return (nextLong() >>> 11) * 0x1.0p-53; }
+    @Override public double nextDouble() { return (nextLong() >>> 11) * 0x1.0p-53; }
 
-    public float nextFloat(float min, float max) { return min + nextFloat() * (max - min); }
+    /** Uniform in {@code [min, max)}. */
+    @Override public float nextFloat(float min, float max) {
+        float range = max - min;
+        if (!(range > 0f) || Float.isInfinite(range)) {
+            throw new IllegalArgumentException("need finite min < max with a finite range: " + min + ", " + max);
+        }
+        float r = min + nextFloat() * range;
+        return r < max ? r : Math.nextDown(max);
+    }
 
-    public double nextGaussian() {
+    @Override public double nextGaussian() {
         double u1 = 1.0 - nextDouble(), u2 = nextDouble();
         return Math.sqrt(-2.0 * Math.log(u1)) * Math.cos(2.0 * Math.PI * u2);
     }
 
-    public void nextBytes(byte[] out) {
+    @Override public void nextBytes(byte[] out) {
+        Checks.notNull(out, "out");
         int i = 0;
         while (i + 8 <= out.length) {
             long v = nextLong();
@@ -65,10 +92,25 @@ public final class FastRandom {
         }
     }
 
+    /** Fisher-Yates shuffle. */
     public void shuffle(int[] a) {
         for (int i = a.length - 1; i > 0; i--) {
             int j = nextInt(i + 1);
             int t = a[i]; a[i] = a[j]; a[j] = t;
+        }
+    }
+
+    public void shuffle(long[] a) {
+        for (int i = a.length - 1; i > 0; i--) {
+            int j = nextInt(i + 1);
+            long t = a[i]; a[i] = a[j]; a[j] = t;
+        }
+    }
+
+    public <T> void shuffle(T[] a) {
+        for (int i = a.length - 1; i > 0; i--) {
+            int j = nextInt(i + 1);
+            T t = a[i]; a[i] = a[j]; a[j] = t;
         }
     }
 }

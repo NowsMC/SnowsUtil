@@ -42,25 +42,38 @@ public final class FastMath {
 
     public static double fastAbs(double v) { return Double.longBitsToDouble(Double.doubleToRawLongBits(v) & 0x7FFFFFFFFFFFFFFFL); }
 
-    public static int fastFloor(float v) { int i = (int) v; return v < i ? i - 1 : i; }
+    public static int fastFloor(float v) { int i = (int) v; return (v < i && i != Integer.MIN_VALUE) ? i - 1 : i; }
 
-    public static int fastFloor(double v) { int i = (int) v; return v < i ? i - 1 : i; }
+    public static int fastFloor(double v) { int i = (int) v; return (v < i && i != Integer.MIN_VALUE) ? i - 1 : i; }
 
-    public static int fastCeil(float v) { int i = (int) v; return v > i ? i + 1 : i; }
+    public static int fastCeil(float v) { int i = (int) v; return (v > i && i != Integer.MAX_VALUE) ? i + 1 : i; }
 
-    public static int fastCeil(double v) { int i = (int) v; return v > i ? i + 1 : i; }
+    public static int fastCeil(double v) { int i = (int) v; return (v > i && i != Integer.MAX_VALUE) ? i + 1 : i; }
 
-    public static int fastRound(float v) { return fastFloor(v + 0.5f); }
+    /** Round half up; exact (unlike {@code floor(v + 0.5f)}, which misrounds 0.49999997f) because it is the JDK's {@link Math#round(float)}. */
+    public static int fastRound(float v) { return Math.round(v); }
 
-    public static int fastRound(double v) { return fastFloor(v + 0.5d); }
+    /** Round half up, saturating at the {@code int} range. */
+    public static int fastRound(double v) {
+        long r = Math.round(v);
+        return r > Integer.MAX_VALUE ? Integer.MAX_VALUE : (r < Integer.MIN_VALUE ? Integer.MIN_VALUE : (int) r);
+    }
 
     public static int sign(int v) { return (v >> 31) | (-v >>> 31); }
 
     public static int sign(float v) { return v > 0f ? 1 : (v < 0f ? -1 : 0); }
 
-    public static int mod(int a, int m) { int r = a % m; return r < 0 ? r + m : r; }
+    /** Floor modulo (the JDK's {@link Math#floorMod(int, int)}): the result has the sign of {@code m}. */
+    public static int mod(int a, int m) { return Math.floorMod(a, m); }
 
-    public static float mod(float a, float m) { float r = a % m; return r < 0f ? r + m : r; }
+    /** Floor modulo for {@code m > 0}: the result is always in {@code [0, m)}; NaN propagates. */
+    public static float mod(float a, float m) {
+        if (!(m > 0f)) throw new IllegalArgumentException("m must be > 0 but was " + m);
+        float r = a % m;
+        if (!(r < 0f)) return r;
+        float s = r + m;
+        return s < m ? s : Math.nextDown(m);
+    }
 
     public static float wrap(float v, float min, float max) { return min + mod(v - min, max - min); }
 
