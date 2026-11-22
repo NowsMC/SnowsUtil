@@ -120,7 +120,7 @@ public class IntHashSet {
     }
 
     public void clear() {
-        Arrays.fill(keys, 0);
+        if (size > 0) Arrays.fill(keys, 0);
         modCount++;
         size = 0;
         if (hasZero) modCount++;
