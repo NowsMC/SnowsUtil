@@ -1,18 +1,19 @@
-package space.nows.util.collections.specialized;
+package space.nows.util.collections.indexed;
 
 import java.util.Arrays;
 import java.util.EnumMap;
 import java.util.Objects;
 import java.util.function.BiConsumer;
 
-public class FastEnumMap<E extends Enum<E>, V> {
+/** Map from enum constants to values, indexed by {@link Enum#ordinal()} in a plain array. */
+public class EnumArrayMap<E extends Enum<E>, V> {
     private final Class<E> keyType;
     private final E[] universe;
     private final Object[] values;
     private final boolean[] present;
     private int size;
 
-    public FastEnumMap(Class<E> keyType) {
+    public EnumArrayMap(Class<E> keyType) {
         this.keyType = Objects.requireNonNull(keyType, "keyType");
         this.universe = keyType.getEnumConstants();
         if (universe == null) throw new IllegalArgumentException(keyType + " is not an enum");
@@ -74,8 +75,8 @@ public class FastEnumMap<E extends Enum<E>, V> {
     }
 
     /** Independent copy of the map (values are shared, not cloned). */
-    public FastEnumMap<E, V> copy() {
-        FastEnumMap<E, V> out = new FastEnumMap<>(keyType);
+    public EnumArrayMap<E, V> copy() {
+        EnumArrayMap<E, V> out = new EnumArrayMap<>(keyType);
         forEach(out::put);
         return out;
     }

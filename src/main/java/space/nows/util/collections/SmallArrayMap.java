@@ -1,6 +1,6 @@
-package space.nows.util.collections.specialized;
+package space.nows.util.collections;
 
-import space.nows.util.error.Checks;
+import space.nows.util.check.Preconditions;
 
 import java.util.Arrays;
 import java.util.LinkedHashMap;
@@ -9,15 +9,19 @@ import java.util.Objects;
 import java.util.function.Function;
 import java.util.function.BiConsumer;
 
-public class CompactHashMap<K, V> {
+/**
+ * Map that stores entries in insertion-ordered parallel arrays and searches them linearly. Lookups are O(n),
+ * so use it only for a handful of entries; it avoids the per-entry overhead of a hash table.
+ */
+public class SmallArrayMap<K, V> {
     private Object[] keys;
     private Object[] values;
     private int size;
 
-    public CompactHashMap() { this(4); }
+    public SmallArrayMap() { this(4); }
 
-    public CompactHashMap(int initialCapacity) {
-        int cap = Math.max(1, Checks.nonNegative(initialCapacity, "initialCapacity"));
+    public SmallArrayMap(int initialCapacity) {
+        int cap = Math.max(1, Preconditions.nonNegative(initialCapacity, "initialCapacity"));
         keys = new Object[cap];
         values = new Object[cap];
     }
@@ -68,6 +72,7 @@ public class CompactHashMap<K, V> {
         return null;
     }
 
+    /** Removes by moving the last entry into the vacated slot, so the iteration order changes. */
     @SuppressWarnings("unchecked")
     public V remove(Object key) {
         int i = indexOf(key);
@@ -107,8 +112,8 @@ public class CompactHashMap<K, V> {
         return created;
     }
 
-    public CompactHashMap<K, V> copy() {
-        CompactHashMap<K, V> out = new CompactHashMap<>(Math.max(1, size));
+    public SmallArrayMap<K, V> copy() {
+        SmallArrayMap<K, V> out = new SmallArrayMap<>(Math.max(1, size));
         forEach(out::put);
         return out;
     }

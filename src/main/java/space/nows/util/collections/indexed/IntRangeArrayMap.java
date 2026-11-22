@@ -1,4 +1,4 @@
-package space.nows.util.collections.specialized;
+package space.nows.util.collections.indexed;
 
 import space.nows.util.error.KeyOutOfRangeException;
 import space.nows.util.function.IntObjConsumer;
@@ -12,13 +12,13 @@ import java.util.TreeMap;
  * {@link #put} rejects keys outside the range with {@link KeyOutOfRangeException}; {@link #get}, {@link #containsKey}
  * and {@link #remove} treat such keys as absent, like any other map.
  */
-public class FixedArrayMap<V> {
+public class IntRangeArrayMap<V> {
     private final int minKey;
     private final Object[] values;
     private final boolean[] present;
     private int size;
 
-    public FixedArrayMap(int minKey, int maxKey) {
+    public IntRangeArrayMap(int minKey, int maxKey) {
         if (maxKey < minKey) throw new IllegalArgumentException("maxKey < minKey");
         long len = (long) maxKey - minKey + 1;
         if (len > Integer.MAX_VALUE - 8) throw new IllegalArgumentException("range too large");
