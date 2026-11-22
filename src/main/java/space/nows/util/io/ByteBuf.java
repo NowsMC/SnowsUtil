@@ -64,6 +64,7 @@ public final class ByteBuf {
 
     /** Guarantees room for {@code n} more bytes. */
     public ByteBuf ensureWritable(int n) {
+        if (n >= 0 && n <= data.length - writePos) return this;
         Preconditions.nonNegative(n, "n");
         long need = (long) writePos + n;
         if (need > data.length) {
