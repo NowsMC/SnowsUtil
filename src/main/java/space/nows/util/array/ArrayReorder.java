@@ -1,6 +1,8 @@
 package space.nows.util.array;
 
 import java.util.Objects;
+import java.util.concurrent.ThreadLocalRandom;
+import java.util.random.RandomGenerator;
 
 /** In-place reordering: swapping two elements and reversing a range. */
 public final class ArrayReorder {
@@ -40,5 +42,37 @@ public final class ArrayReorder {
 
     public static <T> void reverse(T[] a) {
         for (int i = 0, j = a.length - 1; i < j; i++, j--) { T t = a[i]; a[i] = a[j]; a[j] = t; }
+    }
+
+    public static void shuffle(byte[] a) { shuffle(a, ThreadLocalRandom.current()); }
+
+    /** Fisher-Yates: every permutation is equally likely when {@code rng} is uniform. */
+    public static void shuffle(byte[] a, RandomGenerator rng) {
+        Objects.requireNonNull(rng, "rng");
+        for (int i = a.length - 1; i > 0; i--) swap(a, i, rng.nextInt(i + 1));
+    }
+
+    public static void shuffle(int[] a) { shuffle(a, ThreadLocalRandom.current()); }
+
+    /** Fisher-Yates: every permutation is equally likely when {@code rng} is uniform. */
+    public static void shuffle(int[] a, RandomGenerator rng) {
+        Objects.requireNonNull(rng, "rng");
+        for (int i = a.length - 1; i > 0; i--) swap(a, i, rng.nextInt(i + 1));
+    }
+
+    public static void shuffle(long[] a) { shuffle(a, ThreadLocalRandom.current()); }
+
+    /** Fisher-Yates: every permutation is equally likely when {@code rng} is uniform. */
+    public static void shuffle(long[] a, RandomGenerator rng) {
+        Objects.requireNonNull(rng, "rng");
+        for (int i = a.length - 1; i > 0; i--) swap(a, i, rng.nextInt(i + 1));
+    }
+
+    public static <T> void shuffle(T[] a) { shuffle(a, ThreadLocalRandom.current()); }
+
+    /** Fisher-Yates: every permutation is equally likely when {@code rng} is uniform. */
+    public static <T> void shuffle(T[] a, RandomGenerator rng) {
+        Objects.requireNonNull(rng, "rng");
+        for (int i = a.length - 1; i > 0; i--) swap(a, i, rng.nextInt(i + 1));
     }
 }
