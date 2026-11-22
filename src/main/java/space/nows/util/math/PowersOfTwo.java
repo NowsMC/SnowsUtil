@@ -1,8 +1,8 @@
 package space.nows.util.math;
 
-/** Integer power-of-two and log2 helpers. */
-public final class IntMath {
-    private IntMath() {}
+/** Power-of-two tests, rounding and logarithms for {@code int} values. */
+public final class PowersOfTwo {
+    private PowersOfTwo() {}
 
     public static boolean isPowerOfTwo(int v) { return v > 0 && (v & (v - 1)) == 0; }
 
