@@ -1,4 +1,4 @@
-package space.nows.util.error;
+package space.nows.util.check;
 
 import java.util.Objects;
 
@@ -6,8 +6,8 @@ import java.util.Objects;
  * Argument and state checks. Index/range checks delegate to the JDK's intrinsified
  * {@link Objects} methods; messages are only built on the failure path.
  */
-public final class Checks {
-    private Checks() {}
+public final class Preconditions {
+    private Preconditions() {}
 
     public static <T> T notNull(T value, String name) {
         if (value == null) throw new NullPointerException(name + " must not be null");

@@ -1,2 +1,2 @@
-/** Precondition checks and the library's specific exceptions (all unchecked, all subclasses of the JDK exception they replace). */
+/** Exceptions thrown by the library. All are unchecked and extend the JDK exception type they specialize. */
 package space.nows.util.error;

@@ -1,6 +1,6 @@
 package space.nows.util.concurrent;
 
-import space.nows.util.error.Checks;
+import space.nows.util.check.Preconditions;
 
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.RecursiveAction;
@@ -27,9 +27,9 @@ public final class Parallel {
 
     /** Runs {@code body} for every index in {@code [startInclusive, endExclusive)} using the given pool. */
     public static void forRange(ForkJoinPool pool, int startInclusive, int endExclusive, int grain, IntConsumer body) {
-        Checks.notNull(pool, "pool");
-        Checks.notNull(body, "body");
-        Checks.positive(grain, "grain");
+        Preconditions.notNull(pool, "pool");
+        Preconditions.notNull(body, "body");
+        Preconditions.positive(grain, "grain");
         if (endExclusive <= startInclusive) return;
         if (endExclusive - (long) startInclusive <= grain) {
             for (int i = startInclusive; i < endExclusive; i++) body.accept(i);

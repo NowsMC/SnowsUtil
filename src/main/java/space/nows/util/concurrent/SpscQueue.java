@@ -1,6 +1,6 @@
 package space.nows.util.concurrent;
 
-import space.nows.util.error.Checks;
+import space.nows.util.check.Preconditions;
 
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
@@ -31,7 +31,7 @@ public final class SpscQueue<E> {
 
     /** Producer side. Returns {@code false} if the queue is full. */
     public boolean offer(E e) {
-        Checks.notNull(e, "e");
+        Preconditions.notNull(e, "e");
         long t = tail.get();
         if (t - head.get() == buffer.length) return false;
         buffer[(int) (t & mask)] = e;
@@ -61,8 +61,8 @@ public final class SpscQueue<E> {
 
     /** Consumer side. Passes up to {@code max} elements to {@code sink}, in order; returns how many were consumed. */
     public int drain(Consumer<? super E> sink, int max) {
-        Checks.notNull(sink, "sink");
-        Checks.nonNegative(max, "max");
+        Preconditions.notNull(sink, "sink");
+        Preconditions.nonNegative(max, "max");
         int n = 0;
         E e;
         while (n < max && (e = poll()) != null) {
