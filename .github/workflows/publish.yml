@@ -8,12 +8,19 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: publish
+  cancel-in-progress: false
+
 jobs:
   publish:
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     steps:
       - name: Check out release
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Set up Java
         uses: actions/setup-java@v4
@@ -22,20 +29,32 @@ jobs:
           java-version: '17'
           cache: maven
 
-      - name: Set release version
+      - name: Verify release tag
         run: |
           if [[ "$GITHUB_REF_NAME" != v* ]]; then
             echo "Publishing requires a v-prefixed tag." >&2
             exit 1
           fi
           version="${GITHUB_REF_NAME#v}"
-          if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+([.-][0-9A-Za-z.-]+)?$ ]]; then
+          if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+([.-][0-9A-Za-z.-]+)?$ || "$version" == *SNAPSHOT* ]]; then
             echo "Release tag must contain a valid Maven release version." >&2
             exit 1
           fi
-          ./mvnw --batch-mode --no-transfer-progress versions:set \
-            -DnewVersion="$version" \
-            -DgenerateBackupPoms=false
+          project_version="$(python3 - <<'PY'
+          import xml.etree.ElementTree as ET
+          ns = {"m": "http://maven.apache.org/POM/4.0.0"}
+          print(ET.parse("pom.xml").getroot().find("m:version", ns).text)
+          PY
+          )"
+          if [[ "$project_version" != "$version" ]]; then
+            echo "Tag $GITHUB_REF_NAME does not match the pom version $project_version." >&2
+            exit 1
+          fi
+          git fetch --no-tags origin main
+          if ! git merge-base --is-ancestor "$GITHUB_SHA" FETCH_HEAD; then
+            echo "The tagged commit is not on main." >&2
+            exit 1
+          fi
 
       - name: Build and test before publishing
         run: ./mvnw --batch-mode --no-transfer-progress verify
@@ -148,17 +167,6 @@ jobs:
           path.chmod(0o600)
           PY
 
-      - name: Publish to Sonatype Central
-        env:
-          SIGNING_FINGERPRINT: ${{ steps.gpg-test.outputs.fingerprint }}
-          MAVEN_GPG_PASSPHRASE: ${{ secrets.MAVEN_GPG_PASSPHRASE }}
-        run: >
-          ./mvnw --batch-mode --no-transfer-progress
-          -Prelease,central-publish
-          -Dgpg.keyname="$SIGNING_FINGERPRINT"
-          -DskipTests
-          deploy
-
       - name: Publish to Backblaze B2
         env:
           SIGNING_FINGERPRINT: ${{ steps.gpg-test.outputs.fingerprint }}
@@ -166,6 +174,17 @@ jobs:
         run: >
           ./mvnw --batch-mode --no-transfer-progress
           -Prelease,b2-publish
+          -Dgpg.keyname="$SIGNING_FINGERPRINT"
+          -DskipTests
+          deploy
+
+      - name: Publish to Sonatype Central
+        env:
+          SIGNING_FINGERPRINT: ${{ steps.gpg-test.outputs.fingerprint }}
+          MAVEN_GPG_PASSPHRASE: ${{ secrets.MAVEN_GPG_PASSPHRASE }}
+        run: >
+          ./mvnw --batch-mode --no-transfer-progress
+          -Prelease,central-publish
           -Dgpg.keyname="$SIGNING_FINGERPRINT"
           -DskipTests
           deploy
