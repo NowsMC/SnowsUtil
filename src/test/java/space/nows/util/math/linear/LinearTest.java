@@ -2,7 +2,7 @@ package space.nows.util.math.linear;
 
 import org.junit.jupiter.api.Test;
 import space.nows.util.error.SingularMatrixException;
-import space.nows.util.math.FastMath;
+import space.nows.util.math.Angles;
 import space.nows.util.math.FastRandom;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -16,7 +16,7 @@ class LinearTest {
         Vec3 v = new Vec3(1, 0, 0).cross(new Vec3(0, 1, 0));
         assertEquals(new Vec3(0, 0, 1), v);
 
-        Quaternion q = new Quaternion().setFromAxisAngle(0, 0, 1, FastMath.HALF_PI);
+        Quaternion q = new Quaternion().setFromAxisAngle(0, 0, 1, Angles.HALF_PI);
         Vec3 r = q.rotate(new Vec3(1, 0, 0));
         assertEquals(0f, r.x, 1e-5);
         assertEquals(1f, r.y, 1e-5);
@@ -39,7 +39,7 @@ class LinearTest {
             Mat4 m = new Mat4().setRotation(q);
             m.multiply(new Mat4().setScale(rnd.nextFloat(0.5f, 3f), rnd.nextFloat(0.5f, 3f), rnd.nextFloat(0.5f, 3f)));
             m.multiply(new Mat4().setTranslation(rnd.nextFloat(-50f, 50f), rnd.nextFloat(-50f, 50f), rnd.nextFloat(-50f, 50f)));
-            Mat4 inv = m.copy().invert();
+            Mat4 inv = Mat4Inverse.invert(m.copy());
             Mat4 prod = new Mat4();
             Mat4.multiply(m, inv, prod);
             assertIdentity(prod, 1e-3);
@@ -57,15 +57,15 @@ class LinearTest {
     @Test void inverseNeedsPivotingToHandleAZeroOnTheDiagonal() {
         Mat4 swap = new Mat4();
         swap.set(0, 0, 0f).set(1, 1, 0f).set(0, 1, 1f).set(1, 0, 1f);   // swaps x and y; m[0][0] == 0
-        Mat4 inv = swap.copy().invert();
+        Mat4 inv = Mat4Inverse.invert(swap.copy());
         Mat4 prod = new Mat4();
         Mat4.multiply(swap, inv, prod);
         assertIdentity(prod, 1e-6);
     }
 
     @Test void invertingAPerspectiveMatrixRoundTrips() {
-        Mat4 proj = new Mat4().setPerspective(1.0f, 16f / 9f, 0.1f, 100f);
-        Mat4 inv = proj.copy().invert();
+        Mat4 proj = Mat4Projection.perspective(new Mat4(), 1.0f, 16f / 9f, 0.1f, 100f);
+        Mat4 inv = Mat4Inverse.invert(proj.copy());
         Mat4 prod = new Mat4();
         Mat4.multiply(proj, inv, prod);
         assertIdentity(prod, 1e-3);
@@ -74,13 +74,13 @@ class LinearTest {
     @Test void singularMatricesAreRejectedAndLeftUntouched() {
         Mat4 flat = new Mat4().setScale(1f, 0f, 1f);
         Mat4 before = flat.copy();
-        SingularMatrixException e = assertThrows(SingularMatrixException.class, flat::invert);
+        SingularMatrixException e = assertThrows(SingularMatrixException.class, () -> Mat4Inverse.invert(flat));
         assertTrue(e.getMessage().contains("singular"));
         assertEquals(before, flat);
         Mat4 zero = new Mat4().setScale(0f, 0f, 0f);
-        assertThrows(ArithmeticException.class, zero::invert);
+        assertThrows(ArithmeticException.class, () -> Mat4Inverse.invert(zero));
         Mat4 nan = new Mat4().set(0, 0, Float.NaN);
-        assertThrows(SingularMatrixException.class, nan::invert);
+        assertThrows(SingularMatrixException.class, () -> Mat4Inverse.invert(nan));
     }
 
     @Test void elementAccessIsBoundsChecked() {
@@ -97,19 +97,19 @@ class LinearTest {
 
     @Test void projectionsRejectParametersThatWouldProduceNaNOrInfinity() {
         Mat4 m = new Mat4();
-        assertThrows(IllegalArgumentException.class, () -> m.setPerspective(0f, 1f, 0.1f, 10f));
-        assertThrows(IllegalArgumentException.class, () -> m.setPerspective((float) Math.PI, 1f, 0.1f, 10f));
-        assertThrows(IllegalArgumentException.class, () -> m.setPerspective(Float.NaN, 1f, 0.1f, 10f));
-        assertThrows(IllegalArgumentException.class, () -> m.setPerspective(1f, 0f, 0.1f, 10f));
-        assertThrows(IllegalArgumentException.class, () -> m.setPerspective(1f, 1f, 0f, 10f));
-        assertThrows(IllegalArgumentException.class, () -> m.setPerspective(1f, 1f, 5f, 5f));
-        assertThrows(IllegalArgumentException.class, () -> m.setPerspective(1f, 1f, 5f, 1f));
-        assertThrows(IllegalArgumentException.class, () -> m.setPerspective(1f, 1f, 0.1f, Float.POSITIVE_INFINITY));
-        assertDoesNotThrow(() -> m.setPerspective(1f, 1f, 0.1f, 10f));
-        assertThrows(IllegalArgumentException.class, () -> m.setOrtho(1f, 1f, 0f, 1f, 0f, 1f));
-        assertThrows(IllegalArgumentException.class, () -> m.setOrtho(0f, 1f, 2f, 2f, 0f, 1f));
-        assertThrows(IllegalArgumentException.class, () -> m.setOrtho(0f, 1f, 0f, 1f, 3f, 3f));
-        assertDoesNotThrow(() -> m.setOrtho(0f, 800f, 0f, 600f, -1f, 1f));
+        assertThrows(IllegalArgumentException.class, () -> Mat4Projection.perspective(m, 0f, 1f, 0.1f, 10f));
+        assertThrows(IllegalArgumentException.class, () -> Mat4Projection.perspective(m, (float) Math.PI, 1f, 0.1f, 10f));
+        assertThrows(IllegalArgumentException.class, () -> Mat4Projection.perspective(m, Float.NaN, 1f, 0.1f, 10f));
+        assertThrows(IllegalArgumentException.class, () -> Mat4Projection.perspective(m, 1f, 0f, 0.1f, 10f));
+        assertThrows(IllegalArgumentException.class, () -> Mat4Projection.perspective(m, 1f, 1f, 0f, 10f));
+        assertThrows(IllegalArgumentException.class, () -> Mat4Projection.perspective(m, 1f, 1f, 5f, 5f));
+        assertThrows(IllegalArgumentException.class, () -> Mat4Projection.perspective(m, 1f, 1f, 5f, 1f));
+        assertThrows(IllegalArgumentException.class, () -> Mat4Projection.perspective(m, 1f, 1f, 0.1f, Float.POSITIVE_INFINITY));
+        assertDoesNotThrow(() -> Mat4Projection.perspective(m, 1f, 1f, 0.1f, 10f));
+        assertThrows(IllegalArgumentException.class, () -> Mat4Projection.ortho(m, 1f, 1f, 0f, 1f, 0f, 1f));
+        assertThrows(IllegalArgumentException.class, () -> Mat4Projection.ortho(m, 0f, 1f, 2f, 2f, 0f, 1f));
+        assertThrows(IllegalArgumentException.class, () -> Mat4Projection.ortho(m, 0f, 1f, 0f, 1f, 3f, 3f));
+        assertDoesNotThrow(() -> Mat4Projection.ortho(m, 0f, 800f, 0f, 600f, -1f, 1f));
     }
 
     @Test void matrixEqualityCopyAndHash() {
@@ -150,11 +150,11 @@ class LinearTest {
     }
 
     @Test void slerpEndpointsAndHalfway() {
-        Quaternion a = new Quaternion(), b = new Quaternion().setFromAxisAngle(0, 0, 1, FastMath.HALF_PI);
+        Quaternion a = new Quaternion(), b = new Quaternion().setFromAxisAngle(0, 0, 1, Angles.HALF_PI);
         Quaternion start = a.copy().slerp(b, 0f), end = a.copy().slerp(b, 1f), mid = a.copy().slerp(b, 0.5f);
         assertEquals(1f, start.dot(a), 1e-5);
         assertEquals(1f, Math.abs(end.dot(b)), 1e-5);
-        Quaternion eighth = new Quaternion().setFromAxisAngle(0, 0, 1, FastMath.HALF_PI / 2f);
+        Quaternion eighth = new Quaternion().setFromAxisAngle(0, 0, 1, Angles.HALF_PI / 2f);
         assertEquals(1f, Math.abs(mid.dot(eighth)), 1e-4);
     }
 }
