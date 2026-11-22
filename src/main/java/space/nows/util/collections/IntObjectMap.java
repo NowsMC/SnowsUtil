@@ -1,13 +1,19 @@
 package space.nows.util.collections;
 
+import space.nows.util.function.IntObjConsumer;
+
 import java.util.Arrays;
 import java.util.ConcurrentModificationException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.function.IntFunction;
-import space.nows.util.function.IntObjConsumer;
 
+/**
+ * Open-addressing hash map from {@code int} keys to {@code V} values, with no per-entry objects.
+ * Not thread-safe; iteration is fail-fast. Generated from {@code HashMap.tpl}; edit the template, not this file.
+ */
+@SuppressWarnings("unchecked")
 public class IntObjectMap<V> {
     private final float loadFactor;
     private int[] keys;
@@ -51,21 +57,14 @@ public class IntObjectMap<V> {
         return key == 0 ? hasZero : find(key) >= 0;
     }
 
-    @SuppressWarnings("unchecked")
-    public V get(int key) {
-        if (key == 0) return hasZero ? zeroValue : null;
-        int pos = find(key);
-        return pos >= 0 ? (V) values[pos] : null;
-    }
+    public V get(int key) { return getOrDefault(key, null); }
 
-    @SuppressWarnings("unchecked")
     public V getOrDefault(int key, V defaultValue) {
         if (key == 0) return hasZero ? zeroValue : defaultValue;
         int pos = find(key);
         return pos >= 0 ? (V) values[pos] : defaultValue;
     }
 
-    @SuppressWarnings("unchecked")
     public V put(int key, V value) {
         if (key == 0) {
             V old = hasZero ? zeroValue : null;
@@ -91,13 +90,12 @@ public class IntObjectMap<V> {
         return null;
     }
 
-    @SuppressWarnings("unchecked")
     public V remove(int key) {
         if (key == 0) {
             if (!hasZero) return null;
-            V old = zeroValue;
-            if (hasZero) modCount++;
+            modCount++;
             hasZero = false;
+            V old = zeroValue;
             zeroValue = null;
             return old;
         }
@@ -113,16 +111,20 @@ public class IntObjectMap<V> {
     private void shiftDelete(int pos) {
         int[] k = keys;
         Object[] v = values;
-        int last, curr, slot;
+        int last, slot;
+        int curr;
         for (;;) {
             last = pos;
             pos = (pos + 1) & mask;
             for (;;) {
                 curr = k[pos];
-                if (curr == 0) { k[last] = 0; v[last] = null; return; }
+                if (curr == 0) {
+                    k[last] = 0;
+                    v[last] = null;
+                    return;
+                }
                 slot = HashTables.mix(curr) & mask;
-                boolean movable = HashTables.isMovable(last, pos, slot);
-                if (movable) break;
+                if (HashTables.isMovable(last, pos, slot)) break;
                 pos = (pos + 1) & mask;
             }
             k[last] = curr;
@@ -169,7 +171,6 @@ public class IntObjectMap<V> {
         zeroValue = null;
     }
 
-    @SuppressWarnings("unchecked")
     public void forEach(IntObjConsumer<? super V> action) {
         Objects.requireNonNull(action, "action");
         int mc = modCount;
@@ -180,8 +181,9 @@ public class IntObjectMap<V> {
         int[] ks = keys;
         Object[] vs = values;
         for (int i = 0; i < ks.length; i++) {
-            if (ks[i] != 0) {
-                action.accept(ks[i], (V) vs[i]);
+            int k = ks[i];
+            if (k != 0) {
+                action.accept(k, (V) vs[i]);
                 if (mc != modCount) throw new ConcurrentModificationException();
             }
         }
@@ -196,7 +198,6 @@ public class IntObjectMap<V> {
     }
 
     /** Stores {@code value} only if {@code key} is absent. Returns the existing value, or {@code null} if it was absent. */
-    @SuppressWarnings("unchecked")
     public V putIfAbsent(int key, V value) {
         if (key == 0) {
             if (hasZero) return zeroValue;
@@ -209,7 +210,6 @@ public class IntObjectMap<V> {
     }
 
     /** Returns the value for {@code key}, computing and storing it first if absent. */
-    @SuppressWarnings("unchecked")
     public V computeIfAbsent(int key, IntFunction<? extends V> mapping) {
         Objects.requireNonNull(mapping, "mapping");
         if (key == 0) {
@@ -247,23 +247,22 @@ public class IntObjectMap<V> {
     @Override public boolean equals(Object o) {
         if (o == this) return true;
         if (!(o instanceof IntObjectMap<?> m) || m.size() != size()) return false;
-        if (hasZero && (!m.hasZero || !Objects.equals(zeroValue, m.zeroValue))) return false;
+        if (hasZero && (!m.hasZero || !Objects.equals(m.zeroValue, zeroValue))) return false;
         for (int i = 0; i < keys.length; i++) {
             int k = keys[i];
             if (k != 0) {
                 int pos = m.find(k);
-                if (pos < 0 || !Objects.equals(values[i], m.values[pos])) return false;
+                if (pos < 0 || !Objects.equals(m.values[pos], values[i])) return false;
             }
         }
         return true;
     }
 
-    /** Same value as {@code Map<K,V>.hashCode()} for equal contents. */
+    /** Same value as {@code Map.hashCode()} of the boxed equivalent for equal contents. */
     @Override public int hashCode() {
-        int h = hasZero ? 0 ^ Objects.hashCode(zeroValue) : 0;
-        for (int i = 0; i < keys.length; i++) {
-            if (keys[i] != 0) h += keys[i] ^ Objects.hashCode(values[i]);
-        }
+        int h = 0;
+        if (hasZero) h = Objects.hashCode(zeroValue);
+        for (int i = 0; i < keys.length; i++) if (keys[i] != 0) h += keys[i] ^ Objects.hashCode(values[i]);
         return h;
     }
 

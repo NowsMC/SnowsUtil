@@ -8,6 +8,12 @@ import java.util.Objects;
 import java.util.function.IntBinaryOperator;
 import java.util.function.ObjIntConsumer;
 
+/**
+ * Open-addressing hash map from {@code K} keys to {@code int} values, with no per-entry objects.
+ * Absent keys read as the no-entry value given at construction ({@code 0} by default).
+ * Not thread-safe; iteration is fail-fast. Generated from {@code HashMap.tpl}; edit the template, not this file.
+ */
+@SuppressWarnings("unchecked")
 public class ObjectIntMap<K> {
     private final float loadFactor;
     private final int noEntryValue;
@@ -35,12 +41,10 @@ public class ObjectIntMap<K> {
 
     public int size() { return size; }
 
-    public boolean isEmpty() { return size == 0; }
-
-    private static int hash(Object key) { return HashTables.mix(key.hashCode()); }
+    public boolean isEmpty() { return size() == 0; }
 
     private int find(Object key) {
-        int pos = hash(key) & mask;
+        int pos = HashTables.mix(key.hashCode()) & mask;
         Object k;
         while ((k = keys[pos]) != null) {
             if (k == key || k.equals(key)) return pos;
@@ -64,7 +68,7 @@ public class ObjectIntMap<K> {
 
     public int put(K key, int value) {
         Objects.requireNonNull(key, "key");
-        int pos = hash(key) & mask;
+        int pos = HashTables.mix(key.hashCode()) & mask;
         Object k;
         while ((k = keys[pos]) != null) {
             if (k == key || k.equals(key)) {
@@ -81,9 +85,10 @@ public class ObjectIntMap<K> {
         return noEntryValue;
     }
 
+    /** Adds {@code delta} to the value for {@code key}, treating an absent key as 0; returns the new value. */
     public int addTo(K key, int delta) {
         Objects.requireNonNull(key, "key");
-        int pos = hash(key) & mask;
+        int pos = HashTables.mix(key.hashCode()) & mask;
         Object k;
         while ((k = keys[pos]) != null) {
             if (k == key || k.equals(key)) return values[pos] += delta;
@@ -117,10 +122,12 @@ public class ObjectIntMap<K> {
             pos = (pos + 1) & mask;
             for (;;) {
                 curr = k[pos];
-                if (curr == null) { k[last] = null; return; }
-                slot = hash(curr) & mask;
-                boolean movable = HashTables.isMovable(last, pos, slot);
-                if (movable) break;
+                if (curr == null) {
+                    k[last] = null;
+                    return;
+                }
+                slot = HashTables.mix(curr.hashCode()) & mask;
+                if (HashTables.isMovable(last, pos, slot)) break;
                 pos = (pos + 1) & mask;
             }
             k[last] = curr;
@@ -138,7 +145,7 @@ public class ObjectIntMap<K> {
         for (int i = 0; i < ok.length; i++) {
             Object k = ok[i];
             if (k != null) {
-                int pos = hash(k) & mask;
+                int pos = HashTables.mix(k.hashCode()) & mask;
                 while (keys[pos] != null) pos = (pos + 1) & mask;
                 keys[pos] = k;
                 values[pos] = ov[i];
@@ -156,23 +163,33 @@ public class ObjectIntMap<K> {
     }
 
     public void clear() {
-        if (size > 0) Arrays.fill(keys, null);
+        if (size > 0) {
+            Arrays.fill(keys, null);
+        }
         modCount++;
         size = 0;
     }
 
-    @SuppressWarnings("unchecked")
     public void forEach(ObjIntConsumer<? super K> action) {
         Objects.requireNonNull(action, "action");
         int mc = modCount;
         Object[] ks = keys;
         int[] vs = values;
         for (int i = 0; i < ks.length; i++) {
-            if (ks[i] != null) {
-                action.accept((K) ks[i], vs[i]);
+            Object k = ks[i];
+            if (k != null) {
+                action.accept((K) k, vs[i]);
                 if (mc != modCount) throw new ConcurrentModificationException();
             }
         }
+    }
+
+    /** Values in the same order as {@link #forEach}. */
+    public int[] values() {
+        int[] out = new int[size()];
+        int n = 0;
+        for (int i = 0; i < keys.length; i++) if (keys[i] != null) out[n++] = values[i];
+        return out;
     }
 
     /** Stores {@code value} only if {@code key} is absent. Returns the existing value, or the no-entry value if it was absent. */
@@ -188,12 +205,14 @@ public class ObjectIntMap<K> {
     public int merge(K key, int value, IntBinaryOperator remapping) {
         Objects.requireNonNull(remapping, "remapping");
         Objects.requireNonNull(key, "key");
+        int existing;
         int pos = find(key);
         if (pos < 0) {
             put(key, value);
             return value;
         }
-        int merged = remapping.applyAsInt(values[pos], value);
+        existing = values[pos];
+        int merged = remapping.applyAsInt(existing, value);
         put(key, merged);
         return merged;
     }
@@ -222,15 +241,16 @@ public class ObjectIntMap<K> {
         if (o == this) return true;
         if (!(o instanceof ObjectIntMap<?> m) || m.size() != size()) return false;
         for (int i = 0; i < keys.length; i++) {
-            if (keys[i] != null) {
-                int pos = m.find(keys[i]);
+            Object k = keys[i];
+            if (k != null) {
+                int pos = m.find(k);
                 if (pos < 0 || m.values[pos] != values[i]) return false;
             }
         }
         return true;
     }
 
-    /** Same value as {@code Map<K,Integer>.hashCode()} for equal contents. */
+    /** Same value as {@code Map.hashCode()} of the boxed equivalent for equal contents. */
     @Override public int hashCode() {
         int h = 0;
         for (int i = 0; i < keys.length; i++) if (keys[i] != null) h += keys[i].hashCode() ^ values[i];

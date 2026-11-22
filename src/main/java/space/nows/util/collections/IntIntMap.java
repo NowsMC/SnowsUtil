@@ -1,13 +1,19 @@
 package space.nows.util.collections;
 
+import space.nows.util.function.IntIntConsumer;
+
 import java.util.Arrays;
 import java.util.ConcurrentModificationException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.function.IntBinaryOperator;
-import space.nows.util.function.IntIntConsumer;
 
+/**
+ * Open-addressing hash map from {@code int} keys to {@code int} values, with no per-entry objects.
+ * Absent keys read as the no-entry value given at construction ({@code 0} by default).
+ * Not thread-safe; iteration is fail-fast. Generated from {@code HashMap.tpl}; edit the template, not this file.
+ */
 public class IntIntMap {
     private final float loadFactor;
     private final int noEntryValue;
@@ -86,6 +92,7 @@ public class IntIntMap {
         return noEntryValue;
     }
 
+    /** Adds {@code delta} to the value for {@code key}, treating an absent key as 0; returns the new value. */
     public int addTo(int key, int delta) {
         if (key == 0) {
             zeroValue = (hasZero ? zeroValue : 0) + delta;
@@ -109,7 +116,7 @@ public class IntIntMap {
     public int remove(int key) {
         if (key == 0) {
             if (!hasZero) return noEntryValue;
-            if (hasZero) modCount++;
+            modCount++;
             hasZero = false;
             int old = zeroValue;
             zeroValue = 0;
@@ -125,17 +132,21 @@ public class IntIntMap {
     }
 
     private void shiftDelete(int pos) {
-        int[] k = keys, v = values;
-        int last, curr, slot;
+        int[] k = keys;
+        int[] v = values;
+        int last, slot;
+        int curr;
         for (;;) {
             last = pos;
             pos = (pos + 1) & mask;
             for (;;) {
                 curr = k[pos];
-                if (curr == 0) { k[last] = 0; return; }
+                if (curr == 0) {
+                    k[last] = 0;
+                    return;
+                }
                 slot = HashTables.mix(curr) & mask;
-                boolean movable = HashTables.isMovable(last, pos, slot);
-                if (movable) break;
+                if (HashTables.isMovable(last, pos, slot)) break;
                 pos = (pos + 1) & mask;
             }
             k[last] = curr;
@@ -144,7 +155,8 @@ public class IntIntMap {
     }
 
     private void rehash(int newCap) {
-        int[] ok = keys, ov = values;
+        int[] ok = keys;
+        int[] ov = values;
         keys = new int[newCap];
         values = new int[newCap];
         mask = newCap - 1;
@@ -170,7 +182,9 @@ public class IntIntMap {
     }
 
     public void clear() {
-        if (size > 0) Arrays.fill(keys, 0);
+        if (size > 0) {
+            Arrays.fill(keys, 0);
+        }
         modCount++;
         size = 0;
         if (hasZero) modCount++;
@@ -185,7 +199,8 @@ public class IntIntMap {
             action.accept(0, zeroValue);
             if (mc != modCount) throw new ConcurrentModificationException();
         }
-        int[] ks = keys, vs = values;
+        int[] ks = keys;
+        int[] vs = values;
         for (int i = 0; i < ks.length; i++) {
             int k = ks[i];
             if (k != 0) {
@@ -203,7 +218,7 @@ public class IntIntMap {
         return out;
     }
 
-    /** Values in the same order as {@link #keys()}. */
+    /** Values in the same order as {@link #forEach}. */
     public int[] values() {
         int[] out = new int[size()];
         int n = 0;
@@ -227,26 +242,27 @@ public class IntIntMap {
     /** Combines the existing value (if any) with {@code value}; stores and returns the result. */
     public int merge(int key, int value, IntBinaryOperator remapping) {
         Objects.requireNonNull(remapping, "remapping");
+        int existing;
         if (key == 0) {
             if (!hasZero) {
                 put(key, value);
                 return value;
             }
-            int merged = remapping.applyAsInt(zeroValue, value);
-            put(key, merged);
-            return merged;
+            existing = zeroValue;
+        } else {
+            int pos = find(key);
+            if (pos < 0) {
+                put(key, value);
+                return value;
+            }
+            existing = values[pos];
         }
-        int pos = find(key);
-        if (pos < 0) {
-            put(key, value);
-            return value;
-        }
-        int merged = remapping.applyAsInt(values[pos], value);
+        int merged = remapping.applyAsInt(existing, value);
         put(key, merged);
         return merged;
     }
 
-    /** Independent deep copy. */
+    /** Independent copy of the table. */
     public IntIntMap copy() { return new IntIntMap(this); }
 
     private IntIntMap(IntIntMap o) {
@@ -282,9 +298,10 @@ public class IntIntMap {
         return true;
     }
 
-    /** Same value as {@code Map<Integer,Integer>.hashCode()} for equal contents. */
+    /** Same value as {@code Map.hashCode()} of the boxed equivalent for equal contents. */
     @Override public int hashCode() {
-        int h = hasZero ? zeroValue : 0;
+        int h = 0;
+        if (hasZero) h = zeroValue;
         for (int i = 0; i < keys.length; i++) if (keys[i] != 0) h += keys[i] ^ values[i];
         return h;
     }

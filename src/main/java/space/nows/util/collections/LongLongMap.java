@@ -9,6 +9,11 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.function.LongBinaryOperator;
 
+/**
+ * Open-addressing hash map from {@code long} keys to {@code long} values, with no per-entry objects.
+ * Absent keys read as the no-entry value given at construction ({@code 0L} by default).
+ * Not thread-safe; iteration is fail-fast. Generated from {@code HashMap.tpl}; edit the template, not this file.
+ */
 public class LongLongMap {
     private final float loadFactor;
     private final long noEntryValue;
@@ -87,6 +92,7 @@ public class LongLongMap {
         return noEntryValue;
     }
 
+    /** Adds {@code delta} to the value for {@code key}, treating an absent key as 0; returns the new value. */
     public long addTo(long key, long delta) {
         if (key == 0L) {
             zeroValue = (hasZero ? zeroValue : 0L) + delta;
@@ -126,7 +132,8 @@ public class LongLongMap {
     }
 
     private void shiftDelete(int pos) {
-        long[] k = keys, v = values;
+        long[] k = keys;
+        long[] v = values;
         int last, slot;
         long curr;
         for (;;) {
@@ -134,7 +141,10 @@ public class LongLongMap {
             pos = (pos + 1) & mask;
             for (;;) {
                 curr = k[pos];
-                if (curr == 0L) { k[last] = 0L; return; }
+                if (curr == 0L) {
+                    k[last] = 0L;
+                    return;
+                }
                 slot = HashTables.mix(curr) & mask;
                 if (HashTables.isMovable(last, pos, slot)) break;
                 pos = (pos + 1) & mask;
@@ -145,7 +155,8 @@ public class LongLongMap {
     }
 
     private void rehash(int newCap) {
-        long[] ok = keys, ov = values;
+        long[] ok = keys;
+        long[] ov = values;
         keys = new long[newCap];
         values = new long[newCap];
         mask = newCap - 1;
@@ -171,7 +182,9 @@ public class LongLongMap {
     }
 
     public void clear() {
-        if (size > 0) Arrays.fill(keys, 0L);
+        if (size > 0) {
+            Arrays.fill(keys, 0L);
+        }
         modCount++;
         size = 0;
         if (hasZero) modCount++;
@@ -186,7 +199,8 @@ public class LongLongMap {
             action.accept(0L, zeroValue);
             if (mc != modCount) throw new ConcurrentModificationException();
         }
-        long[] ks = keys, vs = values;
+        long[] ks = keys;
+        long[] vs = values;
         for (int i = 0; i < ks.length; i++) {
             long k = ks[i];
             if (k != 0L) {
@@ -204,7 +218,7 @@ public class LongLongMap {
         return out;
     }
 
-    /** Values in the same order as {@link #keys()}. */
+    /** Values in the same order as {@link #forEach}. */
     public long[] values() {
         long[] out = new long[size()];
         int n = 0;
@@ -248,7 +262,7 @@ public class LongLongMap {
         return merged;
     }
 
-    /** Independent deep copy. */
+    /** Independent copy of the table. */
     public LongLongMap copy() { return new LongLongMap(this); }
 
     private LongLongMap(LongLongMap o) {
@@ -284,9 +298,10 @@ public class LongLongMap {
         return true;
     }
 
-    /** Same value as {@code Map<Long,Long>.hashCode()} for equal contents. */
+    /** Same value as {@code Map.hashCode()} of the boxed equivalent for equal contents. */
     @Override public int hashCode() {
-        int h = hasZero ? Long.hashCode(zeroValue) : 0;
+        int h = 0;
+        if (hasZero) h = Long.hashCode(zeroValue);
         for (int i = 0; i < keys.length; i++) if (keys[i] != 0L) h += Long.hashCode(keys[i]) ^ Long.hashCode(values[i]);
         return h;
     }

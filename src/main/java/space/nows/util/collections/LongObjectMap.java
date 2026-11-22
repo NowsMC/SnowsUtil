@@ -1,13 +1,19 @@
 package space.nows.util.collections;
 
+import space.nows.util.function.LongObjConsumer;
+
 import java.util.Arrays;
 import java.util.ConcurrentModificationException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.function.LongFunction;
-import space.nows.util.function.LongObjConsumer;
 
+/**
+ * Open-addressing hash map from {@code long} keys to {@code V} values, with no per-entry objects.
+ * Not thread-safe; iteration is fail-fast. Generated from {@code HashMap.tpl}; edit the template, not this file.
+ */
+@SuppressWarnings("unchecked")
 public class LongObjectMap<V> {
     private final float loadFactor;
     private long[] keys;
@@ -51,14 +57,14 @@ public class LongObjectMap<V> {
         return key == 0L ? hasZero : find(key) >= 0;
     }
 
-    @SuppressWarnings("unchecked")
-    public V get(long key) {
-        if (key == 0L) return hasZero ? zeroValue : null;
+    public V get(long key) { return getOrDefault(key, null); }
+
+    public V getOrDefault(long key, V defaultValue) {
+        if (key == 0L) return hasZero ? zeroValue : defaultValue;
         int pos = find(key);
-        return pos >= 0 ? (V) values[pos] : null;
+        return pos >= 0 ? (V) values[pos] : defaultValue;
     }
 
-    @SuppressWarnings("unchecked")
     public V put(long key, V value) {
         if (key == 0L) {
             V old = hasZero ? zeroValue : null;
@@ -84,13 +90,12 @@ public class LongObjectMap<V> {
         return null;
     }
 
-    @SuppressWarnings("unchecked")
     public V remove(long key) {
         if (key == 0L) {
             if (!hasZero) return null;
-            V old = zeroValue;
-            if (hasZero) modCount++;
+            modCount++;
             hasZero = false;
+            V old = zeroValue;
             zeroValue = null;
             return old;
         }
@@ -113,10 +118,13 @@ public class LongObjectMap<V> {
             pos = (pos + 1) & mask;
             for (;;) {
                 curr = k[pos];
-                if (curr == 0L) { k[last] = 0L; v[last] = null; return; }
+                if (curr == 0L) {
+                    k[last] = 0L;
+                    v[last] = null;
+                    return;
+                }
                 slot = HashTables.mix(curr) & mask;
-                boolean movable = HashTables.isMovable(last, pos, slot);
-                if (movable) break;
+                if (HashTables.isMovable(last, pos, slot)) break;
                 pos = (pos + 1) & mask;
             }
             k[last] = curr;
@@ -163,7 +171,6 @@ public class LongObjectMap<V> {
         zeroValue = null;
     }
 
-    @SuppressWarnings("unchecked")
     public void forEach(LongObjConsumer<? super V> action) {
         Objects.requireNonNull(action, "action");
         int mc = modCount;
@@ -174,8 +181,9 @@ public class LongObjectMap<V> {
         long[] ks = keys;
         Object[] vs = values;
         for (int i = 0; i < ks.length; i++) {
-            if (ks[i] != 0L) {
-                action.accept(ks[i], (V) vs[i]);
+            long k = ks[i];
+            if (k != 0L) {
+                action.accept(k, (V) vs[i]);
                 if (mc != modCount) throw new ConcurrentModificationException();
             }
         }
@@ -190,7 +198,6 @@ public class LongObjectMap<V> {
     }
 
     /** Stores {@code value} only if {@code key} is absent. Returns the existing value, or {@code null} if it was absent. */
-    @SuppressWarnings("unchecked")
     public V putIfAbsent(long key, V value) {
         if (key == 0L) {
             if (hasZero) return zeroValue;
@@ -203,7 +210,6 @@ public class LongObjectMap<V> {
     }
 
     /** Returns the value for {@code key}, computing and storing it first if absent. */
-    @SuppressWarnings("unchecked")
     public V computeIfAbsent(long key, LongFunction<? extends V> mapping) {
         Objects.requireNonNull(mapping, "mapping");
         if (key == 0L) {
@@ -241,23 +247,22 @@ public class LongObjectMap<V> {
     @Override public boolean equals(Object o) {
         if (o == this) return true;
         if (!(o instanceof LongObjectMap<?> m) || m.size() != size()) return false;
-        if (hasZero && (!m.hasZero || !Objects.equals(zeroValue, m.zeroValue))) return false;
+        if (hasZero && (!m.hasZero || !Objects.equals(m.zeroValue, zeroValue))) return false;
         for (int i = 0; i < keys.length; i++) {
             long k = keys[i];
             if (k != 0L) {
                 int pos = m.find(k);
-                if (pos < 0 || !Objects.equals(values[i], m.values[pos])) return false;
+                if (pos < 0 || !Objects.equals(m.values[pos], values[i])) return false;
             }
         }
         return true;
     }
 
-    /** Same value as {@code Map<K,V>.hashCode()} for equal contents. */
+    /** Same value as {@code Map.hashCode()} of the boxed equivalent for equal contents. */
     @Override public int hashCode() {
-        int h = hasZero ? Long.hashCode(0L) ^ Objects.hashCode(zeroValue) : 0;
-        for (int i = 0; i < keys.length; i++) {
-            if (keys[i] != 0L) h += Long.hashCode(keys[i]) ^ Objects.hashCode(values[i]);
-        }
+        int h = 0;
+        if (hasZero) h = Objects.hashCode(zeroValue);
+        for (int i = 0; i < keys.length; i++) if (keys[i] != 0L) h += Long.hashCode(keys[i]) ^ Objects.hashCode(values[i]);
         return h;
     }
 
