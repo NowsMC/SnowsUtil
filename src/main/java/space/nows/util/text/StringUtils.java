@@ -1,9 +1,11 @@
 package space.nows.util.text;
 
+import space.nows.util.error.Checks;
+
 import java.util.ArrayList;
 import java.util.List;
 
-/** Allocation-light string helpers: blank checks, split, count, padding, capitalize. */
+/** Allocation-light, null-aware string helpers. Methods that take a {@code String} reject {@code null} with a named {@link NullPointerException}. */
 public final class StringUtils {
     private StringUtils() {}
 
@@ -15,7 +17,11 @@ public final class StringUtils {
         return true;
     }
 
+    /** Returns {@code s}, or {@code fallback} if {@code s} is null or blank. */
+    public static String defaultIfBlank(String s, String fallback) { return isBlank(s) ? fallback : s; }
+
     public static List<String> split(String s, char sep) {
+        Checks.notNull(s, "s");
         List<String> out = new ArrayList<>();
         int start = 0;
         for (int i = 0, n = s.length(); i < n; i++) {
@@ -29,12 +35,14 @@ public final class StringUtils {
     }
 
     public static int count(String s, char c) {
+        Checks.notNull(s, "s");
         int n = 0;
         for (int i = 0, len = s.length(); i < len; i++) if (s.charAt(i) == c) n++;
         return n;
     }
 
     public static String padLeft(String s, int width, char pad) {
+        Checks.notNull(s, "s");
         int missing = width - s.length();
         if (missing <= 0) return s;
         StringBuilder sb = new StringBuilder(width);
@@ -43,6 +51,7 @@ public final class StringUtils {
     }
 
     public static String padRight(String s, int width, char pad) {
+        Checks.notNull(s, "s");
         int missing = width - s.length();
         if (missing <= 0) return s;
         StringBuilder sb = new StringBuilder(width).append(s);
@@ -55,5 +64,15 @@ public final class StringUtils {
         char c = s.charAt(0);
         char up = Character.toUpperCase(c);
         return c == up ? s : up + s.substring(1);
+    }
+
+    /** At most {@code maxLength} chars; never leaves half of a surrogate pair at the cut. */
+    public static String truncate(String s, int maxLength) {
+        Checks.notNull(s, "s");
+        Checks.nonNegative(maxLength, "maxLength");
+        if (s.length() <= maxLength) return s;
+        int end = maxLength;
+        if (end > 0 && Character.isHighSurrogate(s.charAt(end - 1))) end--;
+        return s.substring(0, end);
     }
 }
