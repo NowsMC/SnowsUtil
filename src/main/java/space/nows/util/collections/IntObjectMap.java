@@ -58,10 +58,11 @@ public class IntObjectMap<V> {
         return pos >= 0 ? (V) values[pos] : null;
     }
 
+    @SuppressWarnings("unchecked")
     public V getOrDefault(int key, V defaultValue) {
         if (key == 0) return hasZero ? zeroValue : defaultValue;
         int pos = find(key);
-        return pos >= 0 ? get(key) : defaultValue;
+        return pos >= 0 ? (V) values[pos] : defaultValue;
     }
 
     @SuppressWarnings("unchecked")
@@ -148,8 +149,10 @@ public class IntObjectMap<V> {
     }
 
     public void clear() {
-        Arrays.fill(keys, 0);
-        Arrays.fill(values, null);
+        if (size > 0) {
+            Arrays.fill(keys, 0);
+            Arrays.fill(values, null);
+        }
         modCount++;
         size = 0;
         if (hasZero) modCount++;
@@ -184,16 +187,28 @@ public class IntObjectMap<V> {
     }
 
     /** Stores {@code value} only if {@code key} is absent. Returns the existing value, or {@code null} if it was absent. */
+    @SuppressWarnings("unchecked")
     public V putIfAbsent(int key, V value) {
-        if (containsKey(key)) return get(key);
+        if (key == 0) {
+            if (hasZero) return zeroValue;
+        } else {
+            int pos = find(key);
+            if (pos >= 0) return (V) values[pos];
+        }
         put(key, value);
         return null;
     }
 
     /** Returns the value for {@code key}, computing and storing it first if absent. */
+    @SuppressWarnings("unchecked")
     public V computeIfAbsent(int key, IntFunction<? extends V> mapping) {
         Objects.requireNonNull(mapping, "mapping");
-        if (containsKey(key)) return get(key);
+        if (key == 0) {
+            if (hasZero) return zeroValue;
+        } else {
+            int pos = find(key);
+            if (pos >= 0) return (V) values[pos];
+        }
         V created = mapping.apply(key);
         put(key, created);
         return created;

@@ -143,8 +143,10 @@ public class LongObjectMap<V> {
     }
 
     public void clear() {
-        Arrays.fill(keys, 0L);
-        Arrays.fill(values, null);
+        if (size > 0) {
+            Arrays.fill(keys, 0L);
+            Arrays.fill(values, null);
+        }
         modCount++;
         size = 0;
         if (hasZero) modCount++;
@@ -179,16 +181,28 @@ public class LongObjectMap<V> {
     }
 
     /** Stores {@code value} only if {@code key} is absent. Returns the existing value, or {@code null} if it was absent. */
+    @SuppressWarnings("unchecked")
     public V putIfAbsent(long key, V value) {
-        if (containsKey(key)) return get(key);
+        if (key == 0L) {
+            if (hasZero) return zeroValue;
+        } else {
+            int pos = find(key);
+            if (pos >= 0) return (V) values[pos];
+        }
         put(key, value);
         return null;
     }
 
     /** Returns the value for {@code key}, computing and storing it first if absent. */
+    @SuppressWarnings("unchecked")
     public V computeIfAbsent(long key, LongFunction<? extends V> mapping) {
         Objects.requireNonNull(mapping, "mapping");
-        if (containsKey(key)) return get(key);
+        if (key == 0L) {
+            if (hasZero) return zeroValue;
+        } else {
+            int pos = find(key);
+            if (pos >= 0) return (V) values[pos];
+        }
         V created = mapping.apply(key);
         put(key, created);
         return created;
