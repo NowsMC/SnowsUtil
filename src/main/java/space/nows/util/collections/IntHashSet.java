@@ -10,6 +10,10 @@ import java.util.Set;
 import java.util.function.IntConsumer;
 import java.util.stream.IntStream;
 
+/**
+ * Open-addressing hash set of {@code int} values, with no per-element objects. Not thread-safe; iteration is
+ * fail-fast. Generated from {@code HashSet.tpl}; edit the template, not this file.
+ */
 public class IntHashSet {
     private final float loadFactor;
     private int[] keys;
@@ -36,21 +40,24 @@ public class IntHashSet {
 
     public boolean isEmpty() { return size() == 0; }
 
-    public boolean contains(int key) {
-        if (key == 0) return hasZero;
+    private int find(int key) {
         int pos = HashTables.mix(key) & mask;
         int k;
         while ((k = keys[pos]) != 0) {
-            if (k == key) return true;
+            if (k == key) return pos;
             pos = (pos + 1) & mask;
         }
-        return false;
+        return -1;
+    }
+
+    public boolean contains(int key) {
+        return key == 0 ? hasZero : find(key) >= 0;
     }
 
     public boolean add(int key) {
         if (key == 0) {
             boolean added = !hasZero;
-            if (!hasZero) modCount++;
+            if (added) modCount++;
             hasZero = true;
             return added;
         }
@@ -69,36 +76,33 @@ public class IntHashSet {
     public boolean remove(int key) {
         if (key == 0) {
             boolean had = hasZero;
-            if (hasZero) modCount++;
+            if (had) modCount++;
             hasZero = false;
             return had;
         }
-        int pos = HashTables.mix(key) & mask;
-        int k;
-        while ((k = keys[pos]) != 0) {
-            if (k == key) {
-                modCount++;
-                shiftDelete(pos);
-                size--;
-                return true;
-            }
-            pos = (pos + 1) & mask;
-        }
-        return false;
+        int pos = find(key);
+        if (pos < 0) return false;
+        modCount++;
+        shiftDelete(pos);
+        size--;
+        return true;
     }
 
     private void shiftDelete(int pos) {
         int[] k = keys;
-        int last, curr, slot;
+        int last, slot;
+        int curr;
         for (;;) {
             last = pos;
             pos = (pos + 1) & mask;
             for (;;) {
                 curr = k[pos];
-                if (curr == 0) { k[last] = 0; return; }
+                if (curr == 0) {
+                    k[last] = 0;
+                    return;
+                }
                 slot = HashTables.mix(curr) & mask;
-                boolean movable = HashTables.isMovable(last, pos, slot);
-                if (movable) break;
+                if (HashTables.isMovable(last, pos, slot)) break;
                 pos = (pos + 1) & mask;
             }
             k[last] = curr;
@@ -175,10 +179,43 @@ public class IntHashSet {
         return changed;
     }
 
+    /** Adds every element of {@code other}; returns {@code true} if this set changed. */
+    public boolean addAll(IntHashSet other) {
+        Objects.requireNonNull(other, "other");
+        return addAll(other.toArray());
+    }
+
     public boolean containsAll(int[] values) {
         Objects.requireNonNull(values, "values");
         for (int v : values) if (!contains(v)) return false;
         return true;
+    }
+
+    /** Removes every value; returns {@code true} if the set changed. */
+    public boolean removeAll(int[] values) {
+        Objects.requireNonNull(values, "values");
+        boolean changed = false;
+        for (int v : values) changed |= remove(v);
+        return changed;
+    }
+
+    /** Removes every element of {@code other}; returns {@code true} if this set changed. */
+    public boolean removeAll(IntHashSet other) {
+        Objects.requireNonNull(other, "other");
+        return removeAll(other.toArray());
+    }
+
+    /** Keeps only the elements that are also in {@code other}; returns {@code true} if this set changed. */
+    public boolean retainAll(IntHashSet other) {
+        Objects.requireNonNull(other, "other");
+        boolean changed = false;
+        for (int v : toArray()) {
+            if (!other.contains(v)) {
+                remove(v);
+                changed = true;
+            }
+        }
+        return changed;
     }
 
     /** Independent deep copy. */

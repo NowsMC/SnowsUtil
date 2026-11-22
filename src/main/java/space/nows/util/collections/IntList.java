@@ -10,7 +10,10 @@ import java.util.PrimitiveIterator;
 import java.util.function.IntConsumer;
 import java.util.stream.IntStream;
 
-/** Growable {@code int} array list with no boxing. Not thread-safe. */
+/**
+ * Growable {@code int} array list with no boxing. Not thread-safe; iteration is fail-fast. Generated from
+ * {@code PrimitiveList.tpl}; edit the template, not this file.
+ */
 public class IntList {
     private static final int[] EMPTY = {};
 

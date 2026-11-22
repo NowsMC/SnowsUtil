@@ -10,6 +10,10 @@ import java.util.Set;
 import java.util.function.LongConsumer;
 import java.util.stream.LongStream;
 
+/**
+ * Open-addressing hash set of {@code long} values, with no per-element objects. Not thread-safe; iteration is
+ * fail-fast. Generated from {@code HashSet.tpl}; edit the template, not this file.
+ */
 public class LongHashSet {
     private final float loadFactor;
     private long[] keys;
@@ -93,7 +97,10 @@ public class LongHashSet {
             pos = (pos + 1) & mask;
             for (;;) {
                 curr = k[pos];
-                if (curr == 0L) { k[last] = 0L; return; }
+                if (curr == 0L) {
+                    k[last] = 0L;
+                    return;
+                }
                 slot = HashTables.mix(curr) & mask;
                 if (HashTables.isMovable(last, pos, slot)) break;
                 pos = (pos + 1) & mask;
@@ -172,10 +179,43 @@ public class LongHashSet {
         return changed;
     }
 
+    /** Adds every element of {@code other}; returns {@code true} if this set changed. */
+    public boolean addAll(LongHashSet other) {
+        Objects.requireNonNull(other, "other");
+        return addAll(other.toArray());
+    }
+
     public boolean containsAll(long[] values) {
         Objects.requireNonNull(values, "values");
         for (long v : values) if (!contains(v)) return false;
         return true;
+    }
+
+    /** Removes every value; returns {@code true} if the set changed. */
+    public boolean removeAll(long[] values) {
+        Objects.requireNonNull(values, "values");
+        boolean changed = false;
+        for (long v : values) changed |= remove(v);
+        return changed;
+    }
+
+    /** Removes every element of {@code other}; returns {@code true} if this set changed. */
+    public boolean removeAll(LongHashSet other) {
+        Objects.requireNonNull(other, "other");
+        return removeAll(other.toArray());
+    }
+
+    /** Keeps only the elements that are also in {@code other}; returns {@code true} if this set changed. */
+    public boolean retainAll(LongHashSet other) {
+        Objects.requireNonNull(other, "other");
+        boolean changed = false;
+        for (long v : toArray()) {
+            if (!other.contains(v)) {
+                remove(v);
+                changed = true;
+            }
+        }
+        return changed;
     }
 
     /** Independent deep copy. */

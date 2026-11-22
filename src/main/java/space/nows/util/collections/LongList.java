@@ -10,7 +10,10 @@ import java.util.PrimitiveIterator;
 import java.util.function.LongConsumer;
 import java.util.stream.LongStream;
 
-/** Growable {@code long} array list with no boxing. Not thread-safe. */
+/**
+ * Growable {@code long} array list with no boxing. Not thread-safe; iteration is fail-fast. Generated from
+ * {@code PrimitiveList.tpl}; edit the template, not this file.
+ */
 public class LongList {
     private static final long[] EMPTY = {};
 
