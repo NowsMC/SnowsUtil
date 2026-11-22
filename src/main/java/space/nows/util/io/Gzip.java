@@ -21,7 +21,7 @@ public final class Gzip {
     public static byte[] gzip(byte[] data) throws IOException {
         Preconditions.notNull(data, "data");
         ByteArrayOutputStream bos = new ByteArrayOutputStream(Math.max(32, data.length / 2));
-        try (GZIPOutputStream gz = new GZIPOutputStream(bos)) {
+        try (GZIPOutputStream gz = new GZIPOutputStream(bos, 8192)) {
             gz.write(data);
         }
         return bos.toByteArray();
