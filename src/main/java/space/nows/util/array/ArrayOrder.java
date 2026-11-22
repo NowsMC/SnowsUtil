@@ -2,7 +2,7 @@ package space.nows.util.array;
 
 import java.util.NoSuchElementException;
 
-/** Ordering queries: sortedness, minimum, maximum and unsigned comparison of {@code byte[]}. */
+/** Ordering queries: sortedness, minimum and maximum. */
 public final class ArrayOrder {
     private ArrayOrder() {}
 
@@ -68,7 +68,4 @@ public final class ArrayOrder {
         for (int i = 1; i < a.length; i++) if (a[i] > m) m = a[i];
         return m;
     }
-
-    /** Lexicographic comparison treating each byte as unsigned. */
-    public static int compareUnsigned(byte[] a, byte[] b) { return java.util.Arrays.compareUnsigned(a, b); }
 }

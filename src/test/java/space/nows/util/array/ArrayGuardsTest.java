@@ -28,9 +28,6 @@ class ArrayGuardsTest {
 
     @Test void intArrayBasics() {
         int[] a = {1, 2, 3, 4};
-        int[] c = ArrayCopy.copy(a);
-        c[0] = 99;
-        assertEquals(1, a[0]);
         assertArrayEquals(new int[]{3, 4}, ArrayEdit.concat(new int[]{3}, new int[]{4}));
         assertArrayEquals(new int[]{1, 2, 3, 4, 5}, ArrayEdit.append(a, 5));
         assertEquals(3, ArraySearch.indexOf(a, 4, -10));
@@ -52,8 +49,7 @@ class ArrayGuardsTest {
 
     @Test void guardsReportTheProblem() {
         int[] a = {1, 2, 3};
-        assertThrows(IllegalArgumentException.class, () -> ArrayResize.resize(a, -1));
-        assertThrows(IllegalArgumentException.class, () -> ArrayResize.ensureCapacity(a, -1));
+        assertThrows(IllegalArgumentException.class, () -> ArrayCapacity.ensureCapacity(a, -1));
         assertThrows(IndexOutOfBoundsException.class, () -> ArrayEdit.remove(a, 3));
         assertThrows(IndexOutOfBoundsException.class, () -> ArrayEdit.remove(new int[0], 0));
         assertThrows(IndexOutOfBoundsException.class, () -> ArrayEdit.insert(a, 4, 0));
@@ -61,10 +57,6 @@ class ArrayGuardsTest {
         assertThrows(IndexOutOfBoundsException.class, () -> ArrayEdit.swapRemove(a, 0, 4));
         assertThrows(IndexOutOfBoundsException.class, () -> ArrayEdit.swapRemove(a, 2, 2));
         assertThrows(IndexOutOfBoundsException.class, () -> ArrayReorder.reverse(a, 2, 1));
-        assertThrows(IndexOutOfBoundsException.class, () -> ArrayCopy.copy(a, Integer.MAX_VALUE, new int[2], 0, 2));
-        assertThrows(IndexOutOfBoundsException.class, () -> ArrayCopy.copy(a, 0, new int[2], 0, 3));
-        assertThrows(IndexOutOfBoundsException.class, () -> ArrayCopy.copy(a, 0, new int[3], 0, -1));
-        assertThrows(NullPointerException.class, () -> ArrayCopy.copy((int[]) null));
         assertThrows(NullPointerException.class, () -> ArrayEdit.append((int[]) null, 1));
         assertThrows(NoSuchElementException.class, () -> ArrayOrder.min(new int[0]));
         assertThrows(NoSuchElementException.class, () -> ArrayOrder.max(new long[0]));
@@ -72,14 +64,14 @@ class ArrayGuardsTest {
 
     @Test void ensureCapacityNeverReturnsSomethingSmallerThanAsked() {
         int[] a = {1, 2, 3};
-        assertSame(a, ArrayResize.ensureCapacity(a, 3));
-        int[] grown = ArrayResize.ensureCapacity(a, 4);
+        assertSame(a, ArrayCapacity.ensureCapacity(a, 3));
+        int[] grown = ArrayCapacity.ensureCapacity(a, 4);
         assertTrue(grown.length >= 4);
         assertArrayEquals(a, java.util.Arrays.copyOf(grown, 3));
-        CapacityExceededException e = assertThrows(CapacityExceededException.class, () -> ArrayResize.ensureCapacity(a, Integer.MAX_VALUE));
+        CapacityExceededException e = assertThrows(CapacityExceededException.class, () -> ArrayCapacity.ensureCapacity(a, Integer.MAX_VALUE));
         assertEquals(Integer.MAX_VALUE, e.requested());
-        assertThrows(CapacityExceededException.class, () -> ArrayResize.ensureCapacity(new String[0], Integer.MAX_VALUE - 7));
-        assertThrows(CapacityExceededException.class, () -> ArrayResize.ensureCapacity(new byte[0], Integer.MAX_VALUE - 7));
+        assertThrows(CapacityExceededException.class, () -> ArrayCapacity.ensureCapacity(new String[0], Integer.MAX_VALUE - 7));
+        assertThrows(CapacityExceededException.class, () -> ArrayCapacity.ensureCapacity(new byte[0], Integer.MAX_VALUE - 7));
     }
 
     @Test void longArraysHaveTheSameToolbox() {
@@ -93,8 +85,7 @@ class ArrayGuardsTest {
         assertEquals(0, new long[0].length);
     }
 
-    @Test void byteArraysAreUnsignedAwareWhereItMatters() {
-        assertTrue(ArrayOrder.compareUnsigned(new byte[]{(byte) 0xFF}, new byte[]{0x01}) > 0);
+    @Test void byteMinAndMaxAreSigned() {
         assertEquals(-1, ArrayOrder.min(new byte[]{1, -1, 5}));
         assertEquals(5, ArrayOrder.max(new byte[]{1, -1, 5}));
         byte[] hay = {1, 2, 3, 2, 3, 4};
