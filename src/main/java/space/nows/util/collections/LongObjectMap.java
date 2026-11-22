@@ -142,6 +142,15 @@ public class LongObjectMap<V> {
         }
     }
 
+    /** Shrinks the table to the smallest size that holds the current entries. */
+    public void trim() {
+        int cap = HashTables.capacityFor(size, loadFactor);
+        if (cap < keys.length) {
+            modCount++;
+            rehash(cap);
+        }
+    }
+
     public void clear() {
         if (size > 0) {
             Arrays.fill(keys, 0L);
