@@ -1,0 +1,225 @@
+package space.nows.util.collections;
+
+$IMPORTS$
+
+/**
+ * Growable {@code $T$} array list with no boxing. Not thread-safe; iteration is fail-fast. Generated from
+ * {@code PrimitiveList.tpl}; edit the template, not this file.
+ */
+public class $CLASS$ {
+    private static final $T$[] EMPTY = {};
+
+    private $T$[] data;
+    private int size;
+    private int modCount;
+
+    public $CLASS$() { data = EMPTY; }
+
+    public $CLASS$(int initialCapacity) {
+        data = Preconditions.nonNegative(initialCapacity, "initialCapacity") == 0 ? EMPTY : new $T$[initialCapacity];
+    }
+
+    public static $CLASS$ of($T$... values) {
+        Objects.requireNonNull(values, "values");
+        $CLASS$ list = new $CLASS$(values.length);
+        list.addAll(values);
+        return list;
+    }
+
+    public int size() { return size; }
+
+    public boolean isEmpty() { return size == 0; }
+
+    public int capacity() { return data.length; }
+
+    public $T$ get(int index) { return data[Objects.checkIndex(index, size)]; }
+
+    public $T$ set(int index, $T$ value) {
+        Objects.checkIndex(index, size);
+        $T$ old = data[index];
+        data[index] = value;
+        return old;
+    }
+
+    /** First element; throws {@link NoSuchElementException} if empty. */
+    public $T$ first() {
+        if (size == 0) throw new NoSuchElementException("empty list");
+        return data[0];
+    }
+
+    /** Last element; throws {@link NoSuchElementException} if empty. */
+    public $T$ last() {
+        if (size == 0) throw new NoSuchElementException("empty list");
+        return data[size - 1];
+    }
+
+    public void ensureCapacity(int minCapacity) {
+        if (minCapacity > data.length) data = Arrays.copyOf(data, Growth.arrayLength(data.length, minCapacity));
+    }
+
+    /** Releases unused capacity. */
+    public void trimToSize() {
+        if (size < data.length) data = size == 0 ? EMPTY : Arrays.copyOf(data, size);
+    }
+
+    public void add($T$ value) {
+        if (size == data.length) data = Arrays.copyOf(data, Growth.arrayLength(data.length, size + 1));
+        data[size++] = value;
+        modCount++;
+    }
+
+    /** Inserts at {@code index}, shifting later elements right. */
+    public void add(int index, $T$ value) {
+        Preconditions.position(index, size);
+        if (size == data.length) data = Arrays.copyOf(data, Growth.arrayLength(data.length, size + 1));
+        System.arraycopy(data, index, data, index + 1, size - index);
+        data[index] = value;
+        size++;
+        modCount++;
+    }
+
+    public void addAll($T$[] values) {
+        Objects.requireNonNull(values, "values");
+        addAll(values, 0, values.length);
+    }
+
+    public void addAll($T$[] values, int off, int len) {
+        Objects.requireNonNull(values, "values");
+        Preconditions.range(off, len, values.length);
+        if (len == 0) return;
+        ensureCapacity(Math.addExact(size, len));
+        System.arraycopy(values, off, data, size, len);
+        size += len;
+        modCount++;
+    }
+
+    public void addAll($CLASS$ other) {
+        Objects.requireNonNull(other, "other");
+        addAll(other.data, 0, other.size);
+    }
+
+    /** Removes and returns the element at {@code index}, shifting later elements left. */
+    public $T$ removeAt(int index) {
+        Objects.checkIndex(index, size);
+        $T$ old = data[index];
+        System.arraycopy(data, index + 1, data, index, size - index - 1);
+        size--;
+        modCount++;
+        return old;
+    }
+
+    /** Removes and returns the element at {@code index} by moving the last element into its place; order is not kept. */
+    public $T$ swapRemove(int index) {
+        Objects.checkIndex(index, size);
+        $T$ old = data[index];
+        data[index] = data[--size];
+        modCount++;
+        return old;
+    }
+
+    /** Removes and returns the last element; throws {@link NoSuchElementException} if empty. */
+    public $T$ pop() {
+        if (size == 0) throw new NoSuchElementException("empty list");
+        modCount++;
+        return data[--size];
+    }
+
+    /** Removes the first occurrence of {@code value}; returns whether one was found. */
+    public boolean removeValue($T$ value) {
+        int i = indexOf(value);
+        if (i < 0) return false;
+        removeAt(i);
+        return true;
+    }
+
+    public int indexOf($T$ value) {
+        $T$[] d = data;
+        for (int i = 0, n = size; i < n; i++) if (d[i] == value) return i;
+        return -1;
+    }
+
+    public int lastIndexOf($T$ value) {
+        $T$[] d = data;
+        for (int i = size - 1; i >= 0; i--) if (d[i] == value) return i;
+        return -1;
+    }
+
+    public boolean contains($T$ value) { return indexOf(value) >= 0; }
+
+    public void clear() {
+        size = 0;
+        modCount++;
+    }
+
+    public void sort() { Arrays.sort(data, 0, size); }
+
+    public void reverse() {
+        $T$[] d = data;
+        for (int i = 0, j = size - 1; i < j; i++, j--) { $T$ t = d[i]; d[i] = d[j]; d[j] = t; }
+    }
+
+    public $T$[] toArray() { return Arrays.copyOf(data, size); }
+
+    /** Copies elements {@code [from, to)} into a new array. */
+    public $T$[] toArray(int from, int to) {
+        Objects.checkFromToIndex(from, to, size);
+        return Arrays.copyOfRange(data, from, to);
+    }
+
+    public void forEach($CONSUMER$ action) {
+        Objects.requireNonNull(action, "action");
+        int mc = modCount;
+        $T$[] d = data;
+        for (int i = 0, n = size; i < n; i++) {
+            action.accept(d[i]);
+            if (mc != modCount) throw new ConcurrentModificationException();
+        }
+    }
+
+    /** Snapshot stream; later changes to the list are not reflected. */
+    public $STREAM$ stream() { return Arrays.stream(data, 0, size); }
+
+    /** Fail-fast iterator; {@code remove()} is not supported. */
+    public PrimitiveIterator.$ITER$ iterator() {
+        return new PrimitiveIterator.$ITER$() {
+            private final int expected = modCount;
+            private int next;
+
+            @Override public boolean hasNext() { return next < size; }
+
+            @Override public $T$ $NEXT$() {
+                if (expected != modCount) throw new ConcurrentModificationException();
+                if (next >= size) throw new NoSuchElementException();
+                return data[next++];
+            }
+        };
+    }
+
+    public $CLASS$ copy() {
+        $CLASS$ out = new $CLASS$(size);
+        out.addAll(data, 0, size);
+        return out;
+    }
+
+    @Override public boolean equals(Object o) {
+        if (o == this) return true;
+        if (!(o instanceof $CLASS$ l) || l.size != size) return false;
+        return Arrays.equals(data, 0, size, l.data, 0, size);
+    }
+
+    /** Same value as {@code List<$BOX$>.hashCode()} for equal contents. */
+    @Override public int hashCode() {
+        int h = 1;
+        for (int i = 0; i < size; i++) h = 31 * h + @KHASH(data[i]);
+        return h;
+    }
+
+    @Override public String toString() {
+        StringBuilder sb = new StringBuilder("[");
+        for (int i = 0; i < size; i++) {
+            if (i > 0) sb.append(", ");
+            sb.append(data[i]);
+        }
+        return sb.append(']').toString();
+    }
+}
