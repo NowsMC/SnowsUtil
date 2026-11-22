@@ -12,12 +12,17 @@ import java.util.function.Consumer;
  * The capacity is rounded up to a power of two. {@code null} elements are rejected.
  */
 public final class SpscQueue<E> {
+    /** A position counter padded onto its own cache line, plus the owning thread's cached copy of the other counter. */
+    @SuppressWarnings({"serial", "unused"})
+    private static final class Cursor extends AtomicLong {
+        long cachedOther;
+        private long p1, p2, p3, p4, p5, p6;
+    }
+
     private final Object[] buffer;
     private final int mask;
-    private final AtomicLong head = new AtomicLong();
-    private final AtomicLong tail = new AtomicLong();
-    private long cachedHead;
-    private long cachedTail;
+    private final Cursor head = new Cursor();
+    private final Cursor tail = new Cursor();
 
     public SpscQueue(int capacity) {
         if (capacity < 1 || capacity > (1 << 30)) {
@@ -35,9 +40,9 @@ public final class SpscQueue<E> {
     public boolean offer(E e) {
         Preconditions.notNull(e, "e");
         long t = tail.get();
-        if (t - cachedHead == buffer.length) {
-            cachedHead = head.get();
-            if (t - cachedHead == buffer.length) return false;
+        if (t - tail.cachedOther == buffer.length) {
+            tail.cachedOther = head.get();
+            if (t - tail.cachedOther == buffer.length) return false;
         }
         buffer[(int) (t & mask)] = e;
         tail.lazySet(t + 1);
@@ -48,9 +53,9 @@ public final class SpscQueue<E> {
     @SuppressWarnings("unchecked")
     public E poll() {
         long h = head.get();
-        if (h == cachedTail) {
-            cachedTail = tail.get();
-            if (h == cachedTail) return null;
+        if (h == head.cachedOther) {
+            head.cachedOther = tail.get();
+            if (h == head.cachedOther) return null;
         }
         int idx = (int) (h & mask);
         E e = (E) buffer[idx];
@@ -63,9 +68,9 @@ public final class SpscQueue<E> {
     @SuppressWarnings("unchecked")
     public E peek() {
         long h = head.get();
-        if (h == cachedTail) {
-            cachedTail = tail.get();
-            if (h == cachedTail) return null;
+        if (h == head.cachedOther) {
+            head.cachedOther = tail.get();
+            if (h == head.cachedOther) return null;
         }
         return (E) buffer[(int) (h & mask)];
     }
@@ -88,7 +93,7 @@ public final class SpscQueue<E> {
         while (poll() != null) { /* discard */ }
     }
 
-    /** Approximate when called from a thread other than the producer or consumer. */
+    /** Approximate when called from a thread other than the producer or consumer; always within {@code [0, capacity()]}. */
     public int size() {
         long h = head.get();
         long t = tail.get();
