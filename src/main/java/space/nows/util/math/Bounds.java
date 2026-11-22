@@ -1,6 +1,6 @@
 package space.nows.util.math;
 
-/** Clamping and the two-value minimum and maximum, written as plain comparisons for each primitive type. */
+/** Clamping to a range and approximate equality of floating point values. */
 public final class Bounds {
     private Bounds() {}
 
@@ -12,19 +12,7 @@ public final class Bounds {
 
     public static double clamp(double v, double min, double max) { return v < min ? min : (v > max ? max : v); }
 
-    public static int min(int a, int b) { return a < b ? a : b; }
+    public static boolean approxEquals(float a, float b, float epsilon) { return Math.abs(a - b) <= epsilon; }
 
-    public static long min(long a, long b) { return a < b ? a : b; }
-
-    public static float min(float a, float b) { return a < b ? a : b; }
-
-    public static double min(double a, double b) { return a < b ? a : b; }
-
-    public static int max(int a, int b) { return a > b ? a : b; }
-
-    public static long max(long a, long b) { return a > b ? a : b; }
-
-    public static float max(float a, float b) { return a > b ? a : b; }
-
-    public static double max(double a, double b) { return a > b ? a : b; }
+    public static boolean approxEquals(double a, double b, double epsilon) { return Math.abs(a - b) <= epsilon; }
 }

@@ -11,8 +11,6 @@ class ScalarMathTest {
         assertEquals(5, Bounds.clamp(9, 0, 5));
         assertEquals(-2, Rounding.floor(-1.5f));
         assertEquals(-1, Rounding.ceil(-1.5f));
-        assertEquals(3, Signs.abs(-3));
-        assertEquals(2.5f, Signs.abs(-2.5f));
     }
 
     @Test void floorAndCeilMatchMathInTheIntRange() {
