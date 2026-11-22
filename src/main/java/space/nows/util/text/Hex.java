@@ -1,7 +1,7 @@
 package space.nows.util.text;
 
 import space.nows.util.error.CapacityExceededException;
-import space.nows.util.error.Checks;
+import space.nows.util.check.Preconditions;
 import space.nows.util.error.InvalidHexException;
 
 /** Hexadecimal encoding and strict (ASCII-only) decoding of byte arrays. */
@@ -11,15 +11,15 @@ public final class Hex {
     private static final char[] LOWER = "0123456789abcdef".toCharArray();
     private static final char[] UPPER = "0123456789ABCDEF".toCharArray();
 
-    public static String toHex(byte[] data) { return encode(data, 0, Checks.notNull(data, "data").length, LOWER); }
+    public static String toHex(byte[] data) { return encode(data, 0, Preconditions.notNull(data, "data").length, LOWER); }
 
     public static String toHex(byte[] data, int off, int len) { return encode(data, off, len, LOWER); }
 
-    public static String toUpperHex(byte[] data) { return encode(data, 0, Checks.notNull(data, "data").length, UPPER); }
+    public static String toUpperHex(byte[] data) { return encode(data, 0, Preconditions.notNull(data, "data").length, UPPER); }
 
     private static String encode(byte[] data, int off, int len, char[] digits) {
-        Checks.notNull(data, "data");
-        Checks.range(off, len, data.length);
+        Preconditions.notNull(data, "data");
+        Preconditions.range(off, len, data.length);
         if (len > Integer.MAX_VALUE / 2) throw new CapacityExceededException("hex string", 2L * len, Integer.MAX_VALUE);
         char[] out = new char[len * 2];
         for (int i = 0; i < len; i++) {
@@ -36,7 +36,7 @@ public final class Hex {
      * @throws InvalidHexException if the length is odd or a character is not {@code [0-9a-fA-F]}
      */
     public static byte[] fromHex(String hex) {
-        Checks.notNull(hex, "hex");
+        Preconditions.notNull(hex, "hex");
         int n = hex.length();
         if ((n & 1) != 0) throw new InvalidHexException("odd length " + n, n);
         byte[] out = new byte[n / 2];

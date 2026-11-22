@@ -108,52 +108,52 @@ class TextTest {
         assertTrue(Hex.isHex("aBcD09"));
     }
 
-    // ---------------------------------------------------------------- StringUtils
+    // ---------------------------------------------------------------- Strings, Padding, StringSplit
     @Test void splitMatchesTheJdkWithNegativeLimit() {
         for (String s : new String[]{"", "a", "a,b", "a,,b,", ",", ",,", ",a", "abc,def,ghi"}) {
-            assertEquals(List.of(s.split(",", -1)), StringUtils.split(s, ','), "input: " + s);
+            assertEquals(List.of(s.split(",", -1)), StringSplit.split(s, ','), "input: " + s);
         }
-        assertThrows(NullPointerException.class, () -> StringUtils.split(null, ','));
-        assertEquals(2, StringUtils.count("a,b,c", ','));
-        assertEquals(0, StringUtils.count("", ','));
-        assertThrows(NullPointerException.class, () -> StringUtils.count(null, ','));
+        assertThrows(NullPointerException.class, () -> StringSplit.split(null, ','));
+        assertEquals(2, StringSplit.count("a,b,c", ','));
+        assertEquals(0, StringSplit.count("", ','));
+        assertThrows(NullPointerException.class, () -> StringSplit.count(null, ','));
     }
 
     @Test void blankEmptyAndDefaults() {
-        assertTrue(StringUtils.isEmpty(null));
-        assertTrue(StringUtils.isEmpty(""));
-        assertFalse(StringUtils.isEmpty(" "));
-        assertTrue(StringUtils.isBlank(null));
-        assertTrue(StringUtils.isBlank("  \t\n"));
-        assertFalse(StringUtils.isBlank(" a "));
-        assertEquals("fb", StringUtils.defaultIfBlank("  ", "fb"));
-        assertEquals("x", StringUtils.defaultIfBlank("x", "fb"));
-        assertEquals("fb", StringUtils.defaultIfBlank(null, "fb"));
+        assertTrue(Strings.isEmpty(null));
+        assertTrue(Strings.isEmpty(""));
+        assertFalse(Strings.isEmpty(" "));
+        assertTrue(Strings.isBlank(null));
+        assertTrue(Strings.isBlank("  \t\n"));
+        assertFalse(Strings.isBlank(" a "));
+        assertEquals("fb", Strings.defaultIfBlank("  ", "fb"));
+        assertEquals("x", Strings.defaultIfBlank("x", "fb"));
+        assertEquals("fb", Strings.defaultIfBlank(null, "fb"));
     }
 
     @Test void paddingAndCapitalize() {
-        assertEquals("007", StringUtils.padLeft("7", 3, '0'));
-        assertEquals("7  ", StringUtils.padRight("7", 3, ' '));
-        assertEquals("long", StringUtils.padLeft("long", 2, '0'));
-        assertEquals("abc", StringUtils.padRight("abc", -5, ' '));
-        assertThrows(NullPointerException.class, () -> StringUtils.padLeft(null, 3, '0'));
-        assertThrows(NullPointerException.class, () -> StringUtils.padRight(null, 3, '0'));
-        assertEquals("Hello", StringUtils.capitalize("hello"));
-        assertEquals("Hello", StringUtils.capitalize("Hello"));
-        assertEquals("", StringUtils.capitalize(""));
-        assertNull(StringUtils.capitalize(null));
+        assertEquals("007", Padding.padLeft("7", 3, '0'));
+        assertEquals("7  ", Padding.padRight("7", 3, ' '));
+        assertEquals("long", Padding.padLeft("long", 2, '0'));
+        assertEquals("abc", Padding.padRight("abc", -5, ' '));
+        assertThrows(NullPointerException.class, () -> Padding.padLeft(null, 3, '0'));
+        assertThrows(NullPointerException.class, () -> Padding.padRight(null, 3, '0'));
+        assertEquals("Hello", Strings.capitalize("hello"));
+        assertEquals("Hello", Strings.capitalize("Hello"));
+        assertEquals("", Strings.capitalize(""));
+        assertNull(Strings.capitalize(null));
     }
 
     @Test void truncateNeverSplitsASurrogatePair() {
         String s = "a\uD83D\uDE00b";                                // a, a 2-char emoji, b
-        assertEquals("a", StringUtils.truncate(s, 2));
-        assertEquals("a\uD83D\uDE00", StringUtils.truncate(s, 3));
-        assertEquals(s, StringUtils.truncate(s, 4));
-        assertEquals(s, StringUtils.truncate(s, 100));
-        assertEquals("", StringUtils.truncate(s, 0));
-        assertEquals("", StringUtils.truncate("\uD83D\uDE00", 1));
-        assertEquals("abc", StringUtils.truncate("abcdef", 3));
-        assertThrows(IllegalArgumentException.class, () -> StringUtils.truncate("abc", -1));
-        assertThrows(NullPointerException.class, () -> StringUtils.truncate(null, 1));
+        assertEquals("a", Strings.truncate(s, 2));
+        assertEquals("a\uD83D\uDE00", Strings.truncate(s, 3));
+        assertEquals(s, Strings.truncate(s, 4));
+        assertEquals(s, Strings.truncate(s, 100));
+        assertEquals("", Strings.truncate(s, 0));
+        assertEquals("", Strings.truncate("\uD83D\uDE00", 1));
+        assertEquals("abc", Strings.truncate("abcdef", 3));
+        assertThrows(IllegalArgumentException.class, () -> Strings.truncate("abc", -1));
+        assertThrows(NullPointerException.class, () -> Strings.truncate(null, 1));
     }
 }
