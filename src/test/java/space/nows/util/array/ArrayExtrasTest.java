@@ -125,4 +125,20 @@ class ArrayExtrasTest {
             }
         }
     }
+
+    @Test void objectArraysHaveTheSameOperationsAsPrimitiveOnes() {
+        String[] a = {"a", "b", "c", "d", "e"};
+        ArrayReorder.reverse(a, 1, 4);
+        assertArrayEquals(new String[] {"a", "d", "c", "b", "e"}, a);
+        assertThrows(IndexOutOfBoundsException.class, () -> ArrayReorder.reverse(a, 3, 9));
+        ArrayReorder.reverse(a);
+        assertArrayEquals(new String[] {"e", "b", "c", "d", "a"}, a);
+        ArrayReorder.swap(a, 0, 4);
+        assertArrayEquals(new String[] {"a", "b", "c", "d", "e"}, a);
+        assertEquals(2, ArraySearch.indexOf(a, "c"));
+        assertEquals(-1, ArraySearch.lastIndexOf(a, "z"));
+        assertTrue(ArraySearch.contains(a, "e"));
+        assertSame(a, ArrayCapacity.ensureCapacity(a, 5));
+        assertEquals(8, ArrayCapacity.ensureCapacity(a, 8).length);
+    }
 }
