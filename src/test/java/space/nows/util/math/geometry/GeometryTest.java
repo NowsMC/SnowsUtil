@@ -10,21 +10,21 @@ class GeometryTest {
     private static final float[] L_SHAPE = {0, 0, 4, 0, 4, 2, 2, 2, 2, 4, 0, 4};
 
     @Test void intersections() {
-        assertTrue(Intersections.circlesOverlap(0, 0, 1, 1.5f, 0, 1));
-        assertFalse(Intersections.rectsOverlap(0, 0, 1, 1, 5, 5, 1, 1));
+        assertTrue(Overlap.circlesOverlap(0, 0, 1, 1.5f, 0, 1));
+        assertFalse(Overlap.rectsOverlap(0, 0, 1, 1, 5, 5, 1, 1));
     }
 
     @Test void segmentIntersection() {
-        assertTrue(Intersections.segmentsIntersect(0, 0, 4, 4, 0, 4, 4, 0));          // proper crossing (X)
-        assertFalse(Intersections.segmentsIntersect(0, 0, 4, 0, 0, 1, 4, 1));         // parallel
-        assertTrue(Intersections.segmentsIntersect(0, 0, 2, 2, 2, 2, 4, 0));          // touch at an endpoint
-        assertTrue(Intersections.segmentsIntersect(0, 0, 4, 0, 2, 0, 6, 0));          // collinear overlap
-        assertFalse(Intersections.segmentsIntersect(0, 0, 1, 0, 2, 0, 3, 0));         // collinear, disjoint
-        assertTrue(Intersections.segmentsIntersect(0, 0, 4, 0, 2, 0, 2, 3));          // T junction
-        assertFalse(Intersections.segmentsIntersect(0, 0, 1, 1, 2, 0, 3, 1));         // would cross if extended, but does not
-        assertTrue(Intersections.segmentsIntersect(1, 1, 1, 1, 0, 0, 2, 2));          // degenerate point on a segment
-        assertFalse(Intersections.segmentsIntersect(5, 5, 5, 5, 0, 0, 2, 2));         // degenerate point off a segment
-        assertEquals(Intersections.segmentsIntersect(0, 0, 4, 4, 0, 4, 4, 0), Intersections.segmentsIntersect(4, 0, 0, 4, 4, 4, 0, 0));   // symmetric
+        assertTrue(SegmentIntersection.segmentsIntersect(0, 0, 4, 4, 0, 4, 4, 0));          // proper crossing (X)
+        assertFalse(SegmentIntersection.segmentsIntersect(0, 0, 4, 0, 0, 1, 4, 1));         // parallel
+        assertTrue(SegmentIntersection.segmentsIntersect(0, 0, 2, 2, 2, 2, 4, 0));          // touch at an endpoint
+        assertTrue(SegmentIntersection.segmentsIntersect(0, 0, 4, 0, 2, 0, 6, 0));          // collinear overlap
+        assertFalse(SegmentIntersection.segmentsIntersect(0, 0, 1, 0, 2, 0, 3, 0));         // collinear, disjoint
+        assertTrue(SegmentIntersection.segmentsIntersect(0, 0, 4, 0, 2, 0, 2, 3));          // T junction
+        assertFalse(SegmentIntersection.segmentsIntersect(0, 0, 1, 1, 2, 0, 3, 1));         // would cross if extended, but does not
+        assertTrue(SegmentIntersection.segmentsIntersect(1, 1, 1, 1, 0, 0, 2, 2));          // degenerate point on a segment
+        assertFalse(SegmentIntersection.segmentsIntersect(5, 5, 5, 5, 0, 0, 2, 2));         // degenerate point off a segment
+        assertEquals(SegmentIntersection.segmentsIntersect(0, 0, 4, 4, 0, 4, 4, 0), SegmentIntersection.segmentsIntersect(4, 0, 0, 4, 4, 4, 0, 0));   // symmetric
     }
 
     @Test void polygonQueries() {

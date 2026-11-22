@@ -1,13 +1,13 @@
 package space.nows.util.math.geometry;
 
-import space.nows.util.error.Checks;
+import space.nows.util.check.Preconditions;
 
 /** Point-in-polygon, area, winding and convexity for flat {@code x0,y0,x1,y1,...} vertex arrays (simple polygons). */
 public final class Polygons {
     private Polygons() {}
 
     private static int vertexCount(float[] xy) {
-        Checks.notNull(xy, "xy");
+        Preconditions.notNull(xy, "xy");
         if ((xy.length & 1) != 0) {
             throw new IllegalArgumentException("vertex array must hold x,y pairs but has odd length " + xy.length);
         }
