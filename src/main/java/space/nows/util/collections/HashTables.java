@@ -2,8 +2,8 @@ package space.nows.util.collections;
 
 import space.nows.util.error.CapacityExceededException;
 
-final class Hash {
-    private Hash() {}
+final class HashTables {
+    private HashTables() {}
 
     static int mix(int x) {
         int h = x * 0x9E3779B9;

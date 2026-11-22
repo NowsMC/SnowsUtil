@@ -23,21 +23,21 @@ public class ObjectIntMap<K> {
     public ObjectIntMap(int expectedSize) { this(expectedSize, 0.6f, 0); }
 
     public ObjectIntMap(int expectedSize, float loadFactor, int noEntryValue) {
-        Hash.checkLoadFactor(loadFactor);
+        HashTables.checkLoadFactor(loadFactor);
         this.loadFactor = loadFactor;
         this.noEntryValue = noEntryValue;
-        int cap = Hash.capacityFor(expectedSize, loadFactor);
+        int cap = HashTables.capacityFor(expectedSize, loadFactor);
         keys = new Object[cap];
         values = new int[cap];
         mask = cap - 1;
-        threshold = Hash.threshold(cap, loadFactor);
+        threshold = HashTables.threshold(cap, loadFactor);
     }
 
     public int size() { return size; }
 
     public boolean isEmpty() { return size == 0; }
 
-    private static int hash(Object key) { return Hash.mix(key.hashCode()); }
+    private static int hash(Object key) { return HashTables.mix(key.hashCode()); }
 
     private int find(Object key) {
         int pos = hash(key) & mask;
@@ -77,7 +77,7 @@ public class ObjectIntMap<K> {
         modCount++;
         keys[pos] = key;
         values[pos] = value;
-        if (++size >= threshold) rehash(Hash.grow(keys.length));
+        if (++size >= threshold) rehash(HashTables.grow(keys.length));
         return noEntryValue;
     }
 
@@ -92,7 +92,7 @@ public class ObjectIntMap<K> {
         modCount++;
         keys[pos] = key;
         values[pos] = delta;
-        if (++size >= threshold) rehash(Hash.grow(keys.length));
+        if (++size >= threshold) rehash(HashTables.grow(keys.length));
         return delta;
     }
 
@@ -119,7 +119,7 @@ public class ObjectIntMap<K> {
                 curr = k[pos];
                 if (curr == null) { k[last] = null; return; }
                 slot = hash(curr) & mask;
-                boolean movable = Hash.isMovable(last, pos, slot);
+                boolean movable = HashTables.isMovable(last, pos, slot);
                 if (movable) break;
                 pos = (pos + 1) & mask;
             }
@@ -134,7 +134,7 @@ public class ObjectIntMap<K> {
         keys = new Object[newCap];
         values = new int[newCap];
         mask = newCap - 1;
-        threshold = Hash.threshold(newCap, loadFactor);
+        threshold = HashTables.threshold(newCap, loadFactor);
         for (int i = 0; i < ok.length; i++) {
             Object k = ok[i];
             if (k != null) {
@@ -200,7 +200,7 @@ public class ObjectIntMap<K> {
 
     /** Boxed snapshot for handing to JDK APIs. */
     public Map<K, Integer> toJavaMap() {
-        Map<K, Integer> out = new HashMap<>(Hash.javaMapCapacity(size()));
+        Map<K, Integer> out = new HashMap<>(HashTables.javaMapCapacity(size()));
         forEach(out::put);
         return out;
     }

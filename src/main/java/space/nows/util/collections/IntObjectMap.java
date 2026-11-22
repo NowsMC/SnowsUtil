@@ -24,13 +24,13 @@ public class IntObjectMap<V> {
     public IntObjectMap(int expectedSize) { this(expectedSize, 0.6f); }
 
     public IntObjectMap(int expectedSize, float loadFactor) {
-        Hash.checkLoadFactor(loadFactor);
+        HashTables.checkLoadFactor(loadFactor);
         this.loadFactor = loadFactor;
-        int cap = Hash.capacityFor(expectedSize, loadFactor);
+        int cap = HashTables.capacityFor(expectedSize, loadFactor);
         keys = new int[cap];
         values = new Object[cap];
         mask = cap - 1;
-        threshold = Hash.threshold(cap, loadFactor);
+        threshold = HashTables.threshold(cap, loadFactor);
     }
 
     public int size() { return size + (hasZero ? 1 : 0); }
@@ -38,7 +38,7 @@ public class IntObjectMap<V> {
     public boolean isEmpty() { return size() == 0; }
 
     private int find(int key) {
-        int pos = Hash.mix(key) & mask;
+        int pos = HashTables.mix(key) & mask;
         int k;
         while ((k = keys[pos]) != 0) {
             if (k == key) return pos;
@@ -73,7 +73,7 @@ public class IntObjectMap<V> {
             zeroValue = value;
             return old;
         }
-        int pos = Hash.mix(key) & mask;
+        int pos = HashTables.mix(key) & mask;
         int k;
         while ((k = keys[pos]) != 0) {
             if (k == key) {
@@ -86,7 +86,7 @@ public class IntObjectMap<V> {
         modCount++;
         keys[pos] = key;
         values[pos] = value;
-        if (++size >= threshold) rehash(Hash.grow(keys.length));
+        if (++size >= threshold) rehash(HashTables.grow(keys.length));
         return null;
     }
 
@@ -119,8 +119,8 @@ public class IntObjectMap<V> {
             for (;;) {
                 curr = k[pos];
                 if (curr == 0) { k[last] = 0; v[last] = null; return; }
-                slot = Hash.mix(curr) & mask;
-                boolean movable = Hash.isMovable(last, pos, slot);
+                slot = HashTables.mix(curr) & mask;
+                boolean movable = HashTables.isMovable(last, pos, slot);
                 if (movable) break;
                 pos = (pos + 1) & mask;
             }
@@ -135,11 +135,11 @@ public class IntObjectMap<V> {
         keys = new int[newCap];
         values = new Object[newCap];
         mask = newCap - 1;
-        threshold = Hash.threshold(newCap, loadFactor);
+        threshold = HashTables.threshold(newCap, loadFactor);
         for (int i = 0; i < ok.length; i++) {
             int k = ok[i];
             if (k != 0) {
-                int pos = Hash.mix(k) & mask;
+                int pos = HashTables.mix(k) & mask;
                 while (keys[pos] != 0) pos = (pos + 1) & mask;
                 keys[pos] = k;
                 values[pos] = ov[i];
@@ -215,7 +215,7 @@ public class IntObjectMap<V> {
 
     /** Boxed snapshot for handing to JDK APIs. */
     public Map<Integer, V> toJavaMap() {
-        Map<Integer, V> out = new HashMap<>(Hash.javaMapCapacity(size()));
+        Map<Integer, V> out = new HashMap<>(HashTables.javaMapCapacity(size()));
         forEach(out::put);
         return out;
     }

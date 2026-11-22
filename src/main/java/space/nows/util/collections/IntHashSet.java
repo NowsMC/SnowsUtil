@@ -24,12 +24,12 @@ public class IntHashSet {
     public IntHashSet(int expectedSize) { this(expectedSize, 0.6f); }
 
     public IntHashSet(int expectedSize, float loadFactor) {
-        Hash.checkLoadFactor(loadFactor);
+        HashTables.checkLoadFactor(loadFactor);
         this.loadFactor = loadFactor;
-        int cap = Hash.capacityFor(expectedSize, loadFactor);
+        int cap = HashTables.capacityFor(expectedSize, loadFactor);
         keys = new int[cap];
         mask = cap - 1;
-        threshold = Hash.threshold(cap, loadFactor);
+        threshold = HashTables.threshold(cap, loadFactor);
     }
 
     public int size() { return size + (hasZero ? 1 : 0); }
@@ -38,7 +38,7 @@ public class IntHashSet {
 
     public boolean contains(int key) {
         if (key == 0) return hasZero;
-        int pos = Hash.mix(key) & mask;
+        int pos = HashTables.mix(key) & mask;
         int k;
         while ((k = keys[pos]) != 0) {
             if (k == key) return true;
@@ -54,7 +54,7 @@ public class IntHashSet {
             hasZero = true;
             return added;
         }
-        int pos = Hash.mix(key) & mask;
+        int pos = HashTables.mix(key) & mask;
         int k;
         while ((k = keys[pos]) != 0) {
             if (k == key) return false;
@@ -62,7 +62,7 @@ public class IntHashSet {
         }
         modCount++;
         keys[pos] = key;
-        if (++size >= threshold) rehash(Hash.grow(keys.length));
+        if (++size >= threshold) rehash(HashTables.grow(keys.length));
         return true;
     }
 
@@ -73,7 +73,7 @@ public class IntHashSet {
             hasZero = false;
             return had;
         }
-        int pos = Hash.mix(key) & mask;
+        int pos = HashTables.mix(key) & mask;
         int k;
         while ((k = keys[pos]) != 0) {
             if (k == key) {
@@ -96,8 +96,8 @@ public class IntHashSet {
             for (;;) {
                 curr = k[pos];
                 if (curr == 0) { k[last] = 0; return; }
-                slot = Hash.mix(curr) & mask;
-                boolean movable = Hash.isMovable(last, pos, slot);
+                slot = HashTables.mix(curr) & mask;
+                boolean movable = HashTables.isMovable(last, pos, slot);
                 if (movable) break;
                 pos = (pos + 1) & mask;
             }
@@ -109,10 +109,10 @@ public class IntHashSet {
         int[] ok = keys;
         keys = new int[newCap];
         mask = newCap - 1;
-        threshold = Hash.threshold(newCap, loadFactor);
+        threshold = HashTables.threshold(newCap, loadFactor);
         for (int k : ok) {
             if (k != 0) {
-                int pos = Hash.mix(k) & mask;
+                int pos = HashTables.mix(k) & mask;
                 while (keys[pos] != 0) pos = (pos + 1) & mask;
                 keys[pos] = k;
             }
@@ -222,7 +222,7 @@ public class IntHashSet {
 
     /** Boxed snapshot for handing to JDK APIs. */
     public Set<Integer> toJavaSet() {
-        Set<Integer> out = new HashSet<>(Hash.javaMapCapacity(size()));
+        Set<Integer> out = new HashSet<>(HashTables.javaMapCapacity(size()));
         forEach(out::add);
         return out;
     }

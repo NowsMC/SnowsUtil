@@ -8,7 +8,7 @@ import java.util.Objects;
 import java.util.function.LongFunction;
 import space.nows.util.function.LongObjConsumer;
 
-public class LongHashMap<V> {
+public class LongObjectMap<V> {
     private final float loadFactor;
     private long[] keys;
     private Object[] values;
@@ -19,18 +19,18 @@ public class LongHashMap<V> {
     private boolean hasZero;
     private V zeroValue;
 
-    public LongHashMap() { this(16); }
+    public LongObjectMap() { this(16); }
 
-    public LongHashMap(int expectedSize) { this(expectedSize, 0.6f); }
+    public LongObjectMap(int expectedSize) { this(expectedSize, 0.6f); }
 
-    public LongHashMap(int expectedSize, float loadFactor) {
-        Hash.checkLoadFactor(loadFactor);
+    public LongObjectMap(int expectedSize, float loadFactor) {
+        HashTables.checkLoadFactor(loadFactor);
         this.loadFactor = loadFactor;
-        int cap = Hash.capacityFor(expectedSize, loadFactor);
+        int cap = HashTables.capacityFor(expectedSize, loadFactor);
         keys = new long[cap];
         values = new Object[cap];
         mask = cap - 1;
-        threshold = Hash.threshold(cap, loadFactor);
+        threshold = HashTables.threshold(cap, loadFactor);
     }
 
     public int size() { return size + (hasZero ? 1 : 0); }
@@ -38,7 +38,7 @@ public class LongHashMap<V> {
     public boolean isEmpty() { return size() == 0; }
 
     private int find(long key) {
-        int pos = Hash.mix(key) & mask;
+        int pos = HashTables.mix(key) & mask;
         long k;
         while ((k = keys[pos]) != 0L) {
             if (k == key) return pos;
@@ -67,7 +67,7 @@ public class LongHashMap<V> {
             zeroValue = value;
             return old;
         }
-        int pos = Hash.mix(key) & mask;
+        int pos = HashTables.mix(key) & mask;
         long k;
         while ((k = keys[pos]) != 0L) {
             if (k == key) {
@@ -80,7 +80,7 @@ public class LongHashMap<V> {
         modCount++;
         keys[pos] = key;
         values[pos] = value;
-        if (++size >= threshold) rehash(Hash.grow(keys.length));
+        if (++size >= threshold) rehash(HashTables.grow(keys.length));
         return null;
     }
 
@@ -114,8 +114,8 @@ public class LongHashMap<V> {
             for (;;) {
                 curr = k[pos];
                 if (curr == 0L) { k[last] = 0L; v[last] = null; return; }
-                slot = Hash.mix(curr) & mask;
-                boolean movable = Hash.isMovable(last, pos, slot);
+                slot = HashTables.mix(curr) & mask;
+                boolean movable = HashTables.isMovable(last, pos, slot);
                 if (movable) break;
                 pos = (pos + 1) & mask;
             }
@@ -130,11 +130,11 @@ public class LongHashMap<V> {
         keys = new long[newCap];
         values = new Object[newCap];
         mask = newCap - 1;
-        threshold = Hash.threshold(newCap, loadFactor);
+        threshold = HashTables.threshold(newCap, loadFactor);
         for (int i = 0; i < ok.length; i++) {
             long k = ok[i];
             if (k != 0L) {
-                int pos = Hash.mix(k) & mask;
+                int pos = HashTables.mix(k) & mask;
                 while (keys[pos] != 0L) pos = (pos + 1) & mask;
                 keys[pos] = k;
                 values[pos] = ov[i];
@@ -195,9 +195,9 @@ public class LongHashMap<V> {
     }
 
     /** Independent copy of the table (values are shared, not cloned). */
-    public LongHashMap<V> copy() { return new LongHashMap<>(this); }
+    public LongObjectMap<V> copy() { return new LongObjectMap<>(this); }
 
-    private LongHashMap(LongHashMap<V> o) {
+    private LongObjectMap(LongObjectMap<V> o) {
         loadFactor = o.loadFactor;
         keys = o.keys.clone();
         values = o.values.clone();
@@ -210,14 +210,14 @@ public class LongHashMap<V> {
 
     /** Boxed snapshot for handing to JDK APIs. */
     public Map<Long, V> toJavaMap() {
-        Map<Long, V> out = new HashMap<>(Hash.javaMapCapacity(size()));
+        Map<Long, V> out = new HashMap<>(HashTables.javaMapCapacity(size()));
         forEach(out::put);
         return out;
     }
 
     @Override public boolean equals(Object o) {
         if (o == this) return true;
-        if (!(o instanceof LongHashMap<?> m) || m.size() != size()) return false;
+        if (!(o instanceof LongObjectMap<?> m) || m.size() != size()) return false;
         if (hasZero && (!m.hasZero || !Objects.equals(zeroValue, m.zeroValue))) return false;
         for (int i = 0; i < keys.length; i++) {
             long k = keys[i];
