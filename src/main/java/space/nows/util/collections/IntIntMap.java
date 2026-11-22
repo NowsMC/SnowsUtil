@@ -161,7 +161,7 @@ public class IntIntMap {
     }
 
     public void clear() {
-        Arrays.fill(keys, 0);
+        if (size > 0) Arrays.fill(keys, 0);
         modCount++;
         size = 0;
         if (hasZero) modCount++;
@@ -205,7 +205,12 @@ public class IntIntMap {
 
     /** Stores {@code value} only if {@code key} is absent. Returns the existing value, or the no-entry value if it was absent. */
     public int putIfAbsent(int key, int value) {
-        if (containsKey(key)) return get(key);
+        if (key == 0) {
+            if (hasZero) return zeroValue;
+        } else {
+            int pos = find(key);
+            if (pos >= 0) return values[pos];
+        }
         put(key, value);
         return noEntryValue;
     }
@@ -213,11 +218,21 @@ public class IntIntMap {
     /** Combines the existing value (if any) with {@code value}; stores and returns the result. */
     public int merge(int key, int value, IntBinaryOperator remapping) {
         Objects.requireNonNull(remapping, "remapping");
-        if (!containsKey(key)) {
+        if (key == 0) {
+            if (!hasZero) {
+                put(key, value);
+                return value;
+            }
+            int merged = remapping.applyAsInt(zeroValue, value);
+            put(key, merged);
+            return merged;
+        }
+        int pos = find(key);
+        if (pos < 0) {
             put(key, value);
             return value;
         }
-        int merged = remapping.applyAsInt(get(key), value);
+        int merged = remapping.applyAsInt(values[pos], value);
         put(key, merged);
         return merged;
     }

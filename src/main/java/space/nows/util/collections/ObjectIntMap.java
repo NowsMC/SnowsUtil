@@ -147,7 +147,7 @@ public class ObjectIntMap<K> {
     }
 
     public void clear() {
-        Arrays.fill(keys, null);
+        if (size > 0) Arrays.fill(keys, null);
         modCount++;
         size = 0;
     }
@@ -168,7 +168,9 @@ public class ObjectIntMap<K> {
 
     /** Stores {@code value} only if {@code key} is absent. Returns the existing value, or the no-entry value if it was absent. */
     public int putIfAbsent(K key, int value) {
-        if (containsKey(key)) return get(key);
+        Objects.requireNonNull(key, "key");
+        int pos = find(key);
+        if (pos >= 0) return values[pos];
         put(key, value);
         return noEntryValue;
     }
@@ -176,11 +178,13 @@ public class ObjectIntMap<K> {
     /** Combines the existing value (if any) with {@code value}; stores and returns the result. */
     public int merge(K key, int value, IntBinaryOperator remapping) {
         Objects.requireNonNull(remapping, "remapping");
-        if (!containsKey(key)) {
+        Objects.requireNonNull(key, "key");
+        int pos = find(key);
+        if (pos < 0) {
             put(key, value);
             return value;
         }
-        int merged = remapping.applyAsInt(get(key), value);
+        int merged = remapping.applyAsInt(values[pos], value);
         put(key, merged);
         return merged;
     }
