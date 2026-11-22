@@ -2,4 +2,4 @@ target/
 .idea/
 *.iml
 .vscode/
-.env
+.envdependency-reduced-pom.xml
