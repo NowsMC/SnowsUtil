@@ -25,12 +25,12 @@ class HashMapsExtrasTest {
         assertThrows(IllegalArgumentException.class, () -> new IntIntMap(4, 0f, 0));
         assertThrows(IllegalArgumentException.class, () -> new IntIntMap(4, 1f, 0));
         assertThrows(IllegalArgumentException.class, () -> new IntObjectMap<String>(4, Float.NaN));
-        assertThrows(IllegalArgumentException.class, () -> new LongHashMap<String>(-5));
+        assertThrows(IllegalArgumentException.class, () -> new LongObjectMap<String>(-5));
         assertThrows(IllegalArgumentException.class, () -> new IntHashSet(4, 2f));
         CapacityExceededException e = assertThrows(CapacityExceededException.class, () -> new IntIntMap(Integer.MAX_VALUE));
         assertEquals(1 << 30, e.limit());
-        assertThrows(CapacityExceededException.class, () -> Hash.grow(1 << 30));
-        assertEquals(8, Hash.grow(4));
+        assertThrows(CapacityExceededException.class, () -> HashTables.grow(1 << 30));
+        assertEquals(8, HashTables.grow(4));
     }
 
     @Test void nullActionsAndKeysAreRejected() {
@@ -82,7 +82,7 @@ class HashMapsExtrasTest {
 
     @Test void longHashMapDifferential() {
         Random r = new Random(3);
-        LongHashMap<Integer> m = new LongHashMap<>();
+        LongObjectMap<Integer> m = new LongObjectMap<>();
         Map<Long, Integer> ref = new HashMap<>();
         long[] pool = {0L, 1L, -1L, Long.MIN_VALUE, Long.MAX_VALUE, 1L << 32, (1L << 32) + 1, 42L, 43L, 44L, -45L};
         for (int i = 0; i < 200_000; i++) {
@@ -162,7 +162,7 @@ class HashMapsExtrasTest {
         assertNull(m.putIfAbsent(8, "x"));
         assertEquals("x", m.putIfAbsent(8, "y"));
 
-        LongHashMap<String> l = new LongHashMap<>();
+        LongObjectMap<String> l = new LongObjectMap<>();
         assertEquals("v" + Long.MAX_VALUE, l.computeIfAbsent(Long.MAX_VALUE, k -> "v" + k));
         assertEquals(1, l.size());
     }
@@ -188,7 +188,7 @@ class HashMapsExtrasTest {
         o.put(2, "y");
         assertEquals(1, p.size());
 
-        LongHashMap<String> l = new LongHashMap<>();
+        LongObjectMap<String> l = new LongObjectMap<>();
         l.put(1L, "x");
         assertEquals(l, l.copy());
         ObjectIntMap<String> oi = new ObjectIntMap<>();
@@ -206,7 +206,7 @@ class HashMapsExtrasTest {
         IntObjectMap<String> o = new IntObjectMap<>();
         o.put(0, "z"); o.put(3, "t");
         assertArrayEquals(new int[]{0, 3}, o.keys());
-        LongHashMap<String> l = new LongHashMap<>();
+        LongObjectMap<String> l = new LongObjectMap<>();
         l.put(0L, "z"); l.put(1L << 40, "t");
         assertArrayEquals(new long[]{0L, 1L << 40}, l.keys());
     }
@@ -254,7 +254,7 @@ class HashMapsExtrasTest {
         for (int i = 1; i <= 5; i++) o.put(i, "x");
         assertThrows(ConcurrentModificationException.class, () -> o.forEach((k, v) -> o.put(k + 50, "y")));
 
-        LongHashMap<String> l = new LongHashMap<>();
+        LongObjectMap<String> l = new LongObjectMap<>();
         for (long i = 1; i <= 5; i++) l.put(i, "x");
         assertThrows(ConcurrentModificationException.class, () -> l.forEach((k, v) -> l.remove(k)));
 

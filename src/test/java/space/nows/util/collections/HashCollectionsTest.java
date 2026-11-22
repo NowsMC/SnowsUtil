@@ -55,7 +55,7 @@ class HashCollectionsTest {
     }
 
     @Test void longHashMapBasics() {
-        LongHashMap<Integer> m = new LongHashMap<>();
+        LongObjectMap<Integer> m = new LongObjectMap<>();
         for (long i = -500; i < 500; i++) m.put(i * 1_000_003L, (int) i);
         assertEquals(1000, m.size());
         for (long i = -500; i < 500; i++) assertEquals((int) i, m.get(i * 1_000_003L));
