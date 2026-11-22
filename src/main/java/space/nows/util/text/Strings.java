@@ -17,11 +17,13 @@ public final class Strings {
     /** Returns {@code s}, or {@code fallback} if {@code s} is null or blank. */
     public static String defaultIfBlank(String s, String fallback) { return isBlank(s) ? fallback : s; }
 
+    /** Converts the first code point to title case, so supplementary characters and digraphs are handled correctly. */
     public static String capitalize(String s) {
         if (s == null || s.isEmpty()) return s;
-        char c = s.charAt(0);
-        char up = Character.toUpperCase(c);
-        return c == up ? s : up + s.substring(1);
+        int cp = s.codePointAt(0);
+        int title = Character.toTitleCase(cp);
+        if (title == cp) return s;
+        return new StringBuilder(s.length()).appendCodePoint(title).append(s, Character.charCount(cp), s.length()).toString();
     }
 
     /** At most {@code maxLength} chars; never leaves half of a surrogate pair at the cut. */
