@@ -9,6 +9,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 
@@ -208,7 +209,146 @@ public final class ByteBuf {
     /** Next byte without consuming it. */
     public byte peekByte() { ensureReadable(1); return data[readPos]; }
 
+    // ---- variable-length
+
+    /** Unsigned LEB128, 1 to 5 bytes. Negative values always take 5; use {@link #writeZigZagInt} for values that are often negative. */
+    public ByteBuf writeVarInt(int v) {
+        ensureWritable(5);
+        while ((v & ~0x7F) != 0) {
+            data[writePos++] = (byte) ((v & 0x7F) | 0x80);
+            v >>>= 7;
+        }
+        data[writePos++] = (byte) v;
+        return this;
+    }
+
+    /** Unsigned LEB128, 1 to 10 bytes. */
+    public ByteBuf writeVarLong(long v) {
+        ensureWritable(10);
+        while ((v & ~0x7FL) != 0) {
+            data[writePos++] = (byte) ((v & 0x7F) | 0x80);
+            v >>>= 7;
+        }
+        data[writePos++] = (byte) v;
+        return this;
+    }
+
+    public ByteBuf writeZigZagInt(int v) { return writeVarInt((v << 1) ^ (v >> 31)); }
+
+    public ByteBuf writeZigZagLong(long v) { return writeVarLong((v << 1) ^ (v >> 63)); }
+
+    /**
+     * Reads an unsigned LEB128 {@code int}.
+     *
+     * @throws IllegalArgumentException if the encoding is longer than 5 bytes or overflows an {@code int}
+     */
+    public int readVarInt() {
+        int result = 0;
+        int pos = readPos;
+        for (int shift = 0; shift < 35; shift += 7) {
+            if (pos >= writePos) throw new InsufficientDataException(pos - readPos + 1, writePos - readPos);
+            byte b = data[pos++];
+            if (shift == 28 && (b & 0xF0) != 0) throw new IllegalArgumentException("varint does not fit in an int");
+            result |= (b & 0x7F) << shift;
+            if (b >= 0) {
+                readPos = pos;
+                return result;
+            }
+        }
+        throw new IllegalArgumentException("varint does not fit in an int");
+    }
+
+    /**
+     * Reads an unsigned LEB128 {@code long}.
+     *
+     * @throws IllegalArgumentException if the encoding is longer than 10 bytes or overflows a {@code long}
+     */
+    public long readVarLong() {
+        long result = 0;
+        int pos = readPos;
+        for (int shift = 0; shift < 70; shift += 7) {
+            if (pos >= writePos) throw new InsufficientDataException(pos - readPos + 1, writePos - readPos);
+            byte b = data[pos++];
+            if (shift == 63 && (b & 0xFE) != 0) throw new IllegalArgumentException("varint does not fit in a long");
+            result |= (long) (b & 0x7F) << shift;
+            if (b >= 0) {
+                readPos = pos;
+                return result;
+            }
+        }
+        throw new IllegalArgumentException("varint does not fit in a long");
+    }
+
+    public int readZigZagInt() {
+        int v = readVarInt();
+        return (v >>> 1) ^ -(v & 1);
+    }
+
+    public long readZigZagLong() {
+        long v = readVarLong();
+        return (v >>> 1) ^ -(v & 1);
+    }
+
+    /** Writes a varint byte length followed by the UTF-8 bytes of {@code s}. */
+    public ByteBuf writeString(CharSequence s) {
+        byte[] bytes = Preconditions.notNull(s, "s").toString().getBytes(StandardCharsets.UTF_8);
+        writeVarInt(bytes.length);
+        return writeBytes(bytes);
+    }
+
+    /**
+     * Reads a string written by {@link #writeString}. Nothing is consumed if the data is short or the length is
+     * negative or above {@code maxBytes}.
+     */
+    public String readString(int maxBytes) {
+        Preconditions.nonNegative(maxBytes, "maxBytes");
+        int start = readPos;
+        int len = readVarInt();
+        if (len < 0 || len > maxBytes) {
+            readPos = start;
+            throw new IllegalArgumentException("string length " + len + " not in [0, " + maxBytes + "]");
+        }
+        int available = writePos - readPos;
+        if (available < len) {
+            readPos = start;
+            throw new InsufficientDataException(len, available);
+        }
+        return readUtf8(len);
+    }
+
     // ---- JDK bridges
+
+    /** Copies a {@link ByteBuffer}'s remaining bytes into a new buffer without changing the source's position. */
+    public static ByteBuf copyOf(ByteBuffer src) {
+        byte[] bytes = new byte[Preconditions.notNull(src, "src").remaining()];
+        src.duplicate().get(bytes);
+        return new ByteBuf(bytes);
+    }
+
+    /** Appends all remaining bytes of {@code src}, advancing its position. Works for heap and direct buffers. */
+    public ByteBuf writeFrom(ByteBuffer src) {
+        int n = Preconditions.notNull(src, "src").remaining();
+        ensureWritable(n);
+        src.get(data, writePos, n);
+        writePos += n;
+        return this;
+    }
+
+    /** Fills {@code dst} with exactly {@code dst.remaining()} unread bytes. Works for heap and direct buffers. */
+    public void readInto(ByteBuffer dst) {
+        int n = Preconditions.notNull(dst, "dst").remaining();
+        ensureReadable(n);
+        dst.put(data, readPos, n);
+        readPos += n;
+    }
+
+    /** Copies the unread bytes into a new direct buffer in native byte order, ready to read; does not consume them. */
+    public ByteBuffer toDirectBuffer() {
+        ByteBuffer out = ByteBuffer.allocateDirect(writePos - readPos).order(ByteOrder.nativeOrder());
+        out.put(data, readPos, writePos - readPos);
+        out.flip();
+        return out;
+    }
 
     /** Copy of the unread bytes; does not consume them. */
     public byte[] toByteArray() { return Arrays.copyOfRange(data, readPos, writePos); }
