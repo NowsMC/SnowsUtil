@@ -3,6 +3,7 @@ package space.nows.util.bits;
 import space.nows.util.check.Preconditions;
 
 import java.util.Arrays;
+import java.util.BitSet;
 
 /**
  * Fixed-size bit arrays stored in {@code long[]} (bit {@code i} lives in word {@code i >>> 6}).
@@ -49,5 +50,17 @@ public final class BitArrays {
     public static boolean isEmpty(long[] bits) {
         for (long w : bits) if (w != 0L) return false;
         return true;
+    }
+
+    /** Copies a JDK {@link BitSet} into a new array sized for {@code nbits} bits. */
+    public static long[] fromBitSet(BitSet source, int nbits) {
+        Preconditions.notNull(source, "source");
+        if (source.length() > nbits) {
+            throw new IllegalArgumentException("bit set has bits beyond nbits=" + nbits + " (length " + source.length() + ")");
+        }
+        long[] out = create(nbits);
+        long[] words = source.toLongArray();
+        System.arraycopy(words, 0, out, 0, words.length);
+        return out;
     }
 }

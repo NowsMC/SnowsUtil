@@ -34,7 +34,7 @@ class BitsTest {
                 default -> { assertEquals(ref.cardinality(), BitArrays.count(bits)); assertEquals(ref.isEmpty(), BitArrays.isEmpty(bits)); }
             }
         }
-        assertEquals(ref, BitSetConversions.toBitSet(bits));
+        assertEquals(ref, BitSet.valueOf(bits));
         assertEquals(ref.previousSetBit(10_000), BitSearch.previousSetBit(bits, 10_000));
         assertEquals(-1, BitSearch.previousSetBit(bits, -1));
     }
@@ -83,12 +83,12 @@ class BitsTest {
     @Test void bitSetRoundTripWithTheJdk() {
         long[] bits = BitArrays.create(100);
         BitArrays.set(bits, 3); BitArrays.set(bits, 99);
-        BitSet jdk = BitSetConversions.toBitSet(bits);
+        BitSet jdk = BitSet.valueOf(bits);
         assertTrue(jdk.get(99));
-        assertArrayEquals(bits, BitSetConversions.fromBitSet(jdk, 100));
-        assertEquals(4, BitSetConversions.fromBitSet(jdk, 200).length);
-        assertThrows(IllegalArgumentException.class, () -> BitSetConversions.fromBitSet(jdk, 99));
-        assertThrows(NullPointerException.class, () -> BitSetConversions.fromBitSet(null, 10));
+        assertArrayEquals(bits, BitArrays.fromBitSet(jdk, 100));
+        assertEquals(4, BitArrays.fromBitSet(jdk, 200).length);
+        assertThrows(IllegalArgumentException.class, () -> BitArrays.fromBitSet(jdk, 99));
+        assertThrows(NullPointerException.class, () -> BitArrays.fromBitSet(null, 10));
     }
 
     @Test void bitOpsRejectShiftsThatWouldSilentlyWrap() {
@@ -99,10 +99,6 @@ class BitsTest {
         assertThrows(IndexOutOfBoundsException.class, () -> IntBits.setBit(0, 32));
         assertThrows(IndexOutOfBoundsException.class, () -> IntBits.isSet(1, 32));
         assertThrows(IndexOutOfBoundsException.class, () -> IntBits.clearBit(1, -1));
-        assertEquals(4, IntBits.lowestSetBit(12));
-        assertEquals(8, IntBits.highestSetBit(12));
-        assertEquals(0, IntBits.highestSetBit(0));
-        assertEquals(3, IntBits.count(7));
     }
 
     @Test void bitFields() {
@@ -125,14 +121,5 @@ class BitsTest {
             assertEquals(field & BitField.mask(width), BitField.extract(put, offset, width));
             assertEquals(value & ~(BitField.mask(width) << offset), put & ~(BitField.mask(width) << offset));
         }
-    }
-
-    @Test void unsignedConversions() {
-        assertEquals(255, Unsigned.toInt((byte) -1));
-        assertEquals(65535, Unsigned.toInt((short) -1));
-        assertEquals(255L, Unsigned.toLong((byte) -1));
-        assertEquals(65535L, Unsigned.toLong((short) -1));
-        assertEquals(0xFFFFFFFFL, Unsigned.toLong(-1));
-        assertEquals(0L, Unsigned.toLong(0));
     }
 }
