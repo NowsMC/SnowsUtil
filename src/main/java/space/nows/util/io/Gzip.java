@@ -1,7 +1,7 @@
 package space.nows.util.io;
 
 import space.nows.util.error.CapacityExceededException;
-import space.nows.util.error.Checks;
+import space.nows.util.check.Preconditions;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -19,7 +19,7 @@ public final class Gzip {
     }
 
     public static byte[] gzip(byte[] data) throws IOException {
-        Checks.notNull(data, "data");
+        Preconditions.notNull(data, "data");
         ByteArrayOutputStream bos = new ByteArrayOutputStream(Math.max(32, data.length / 2));
         try (GZIPOutputStream gz = new GZIPOutputStream(bos)) {
             gz.write(data);
@@ -29,7 +29,7 @@ public final class Gzip {
 
     /** Decompresses without a size limit. Use {@link #gunzip(byte[], int)} for untrusted input. */
     public static byte[] gunzip(byte[] data) throws IOException {
-        Checks.notNull(data, "data");
+        Preconditions.notNull(data, "data");
         try (GZIPInputStream gz = new GZIPInputStream(new ByteArrayInputStream(data))) {
             return gz.readAllBytes();
         }
@@ -41,10 +41,10 @@ public final class Gzip {
      * @throws CapacityExceededException if the decompressed size would exceed {@code maxBytes}
      */
     public static byte[] gunzip(byte[] data, int maxBytes) throws IOException {
-        Checks.notNull(data, "data");
-        Checks.nonNegative(maxBytes, "maxBytes");
+        Preconditions.notNull(data, "data");
+        Preconditions.nonNegative(maxBytes, "maxBytes");
         try (GZIPInputStream gz = new GZIPInputStream(new ByteArrayInputStream(data))) {
-            return IOUtils.readAll(gz, maxBytes);
+            return Streams.readAll(gz, maxBytes);
         }
     }
 }

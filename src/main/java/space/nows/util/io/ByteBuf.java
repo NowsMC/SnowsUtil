@@ -1,7 +1,7 @@
 package space.nows.util.io;
 
 import space.nows.util.error.CapacityExceededException;
-import space.nows.util.error.Checks;
+import space.nows.util.check.Preconditions;
 import space.nows.util.error.InsufficientDataException;
 
 import java.io.EOFException;
@@ -27,12 +27,12 @@ public final class ByteBuf {
     public ByteBuf() { this(64); }
 
     public ByteBuf(int initialCapacity) {
-        data = new byte[Math.max(16, Checks.nonNegative(initialCapacity, "initialCapacity"))];
+        data = new byte[Math.max(16, Preconditions.nonNegative(initialCapacity, "initialCapacity"))];
     }
 
     /** Wraps {@code wrap} without copying; all of it is readable. A write that needs more room reallocates. */
     public ByteBuf(byte[] wrap) {
-        data = Checks.notNull(wrap, "wrap");
+        data = Preconditions.notNull(wrap, "wrap");
         writePos = wrap.length;
     }
 
@@ -48,7 +48,7 @@ public final class ByteBuf {
 
     /** Moves the read position; it must not pass the write position. */
     public ByteBuf readerIndex(int index) {
-        Checks.position(index, writePos);
+        Preconditions.position(index, writePos);
         readPos = index;
         return this;
     }
@@ -64,7 +64,7 @@ public final class ByteBuf {
 
     /** Guarantees room for {@code n} more bytes. */
     public ByteBuf ensureWritable(int n) {
-        Checks.nonNegative(n, "n");
+        Preconditions.nonNegative(n, "n");
         long need = (long) writePos + n;
         if (need > data.length) {
             if (need > MAX_LENGTH) throw new CapacityExceededException("ByteBuf", need, MAX_LENGTH);
@@ -113,11 +113,11 @@ public final class ByteBuf {
 
     public ByteBuf writeDouble(double v) { return writeLong(Double.doubleToRawLongBits(v)); }
 
-    public ByteBuf writeBytes(byte[] src) { return writeBytes(src, 0, Checks.notNull(src, "src").length); }
+    public ByteBuf writeBytes(byte[] src) { return writeBytes(src, 0, Preconditions.notNull(src, "src").length); }
 
     public ByteBuf writeBytes(byte[] src, int off, int len) {
-        Checks.notNull(src, "src");
-        Checks.range(off, len, src.length);
+        Preconditions.notNull(src, "src");
+        Preconditions.range(off, len, src.length);
         ensureWritable(len);
         System.arraycopy(src, off, data, writePos, len);
         writePos += len;
@@ -126,15 +126,15 @@ public final class ByteBuf {
 
     /** Encodes {@code s} as UTF-8 and appends it (no length prefix). Returns the number of bytes written. */
     public int writeUtf8(CharSequence s) {
-        byte[] bytes = Checks.notNull(s, "s").toString().getBytes(StandardCharsets.UTF_8);
+        byte[] bytes = Preconditions.notNull(s, "s").toString().getBytes(StandardCharsets.UTF_8);
         writeBytes(bytes);
         return bytes.length;
     }
 
     /** Appends exactly {@code len} bytes from {@code in}. Throws {@link EOFException} if the stream ends early; nothing is appended then. */
     public ByteBuf readFrom(InputStream in, int len) throws IOException {
-        Checks.notNull(in, "in");
-        Checks.nonNegative(len, "len");
+        Preconditions.notNull(in, "in");
+        Preconditions.nonNegative(len, "len");
         ensureWritable(len);
         int n = in.readNBytes(data, writePos, len);
         if (n < len) throw new EOFException("expected " + len + " bytes but stream ended after " + n);
@@ -170,18 +170,18 @@ public final class ByteBuf {
 
     public double readDouble() { return Double.longBitsToDouble(readLong()); }
 
-    public void readBytes(byte[] dst) { readBytes(dst, 0, Checks.notNull(dst, "dst").length); }
+    public void readBytes(byte[] dst) { readBytes(dst, 0, Preconditions.notNull(dst, "dst").length); }
 
     public void readBytes(byte[] dst, int off, int len) {
-        Checks.notNull(dst, "dst");
-        Checks.range(off, len, dst.length);
+        Preconditions.notNull(dst, "dst");
+        Preconditions.range(off, len, dst.length);
         ensureReadable(len);
         System.arraycopy(data, readPos, dst, off, len);
         readPos += len;
     }
 
     public byte[] readBytes(int len) {
-        Checks.nonNegative(len, "len");
+        Preconditions.nonNegative(len, "len");
         ensureReadable(len);
         byte[] out = Arrays.copyOfRange(data, readPos, readPos + len);
         readPos += len;
@@ -190,7 +190,7 @@ public final class ByteBuf {
 
     /** Decodes {@code len} bytes as UTF-8 (malformed input becomes U+FFFD). */
     public String readUtf8(int len) {
-        Checks.nonNegative(len, "len");
+        Preconditions.nonNegative(len, "len");
         ensureReadable(len);
         String s = new String(data, readPos, len, StandardCharsets.UTF_8);
         readPos += len;
@@ -198,7 +198,7 @@ public final class ByteBuf {
     }
 
     public ByteBuf skip(int n) {
-        Checks.nonNegative(n, "n");
+        Preconditions.nonNegative(n, "n");
         ensureReadable(n);
         readPos += n;
         return this;
@@ -222,7 +222,7 @@ public final class ByteBuf {
 
     /** Writes and consumes all unread bytes. Returns how many were written. */
     public int writeTo(OutputStream out) throws IOException {
-        Checks.notNull(out, "out");
+        Preconditions.notNull(out, "out");
         int n = writePos - readPos;
         out.write(data, readPos, n);
         readPos = writePos;

@@ -185,55 +185,55 @@ class IoTest {
         assertThrows(IllegalArgumentException.class, () -> shortRead.readFrom(new ByteArrayInputStream(new byte[2]), -1));
     }
 
-    // ---------------------------------------------------------------- IOUtils
+    // ---------------------------------------------------------------- Streams, FileIO
     @Test void copyRejectsABufferThatWouldSpinForever() throws IOException {
         byte[] data = new byte[1000];
         new Random(1).nextBytes(data);
-        assertThrows(IllegalArgumentException.class, () -> IOUtils.copy(new ByteArrayInputStream(data), new ByteArrayOutputStream(), 0));
-        assertThrows(IllegalArgumentException.class, () -> IOUtils.copy(new ByteArrayInputStream(data), new ByteArrayOutputStream(), -4));
+        assertThrows(IllegalArgumentException.class, () -> Streams.copy(new ByteArrayInputStream(data), new ByteArrayOutputStream(), 0));
+        assertThrows(IllegalArgumentException.class, () -> Streams.copy(new ByteArrayInputStream(data), new ByteArrayOutputStream(), -4));
         for (int size : new int[]{1, 7, 1000, 4096}) {
             ByteArrayOutputStream out = new ByteArrayOutputStream();
-            assertEquals(1000, IOUtils.copy(new ByteArrayInputStream(data), out, size));
+            assertEquals(1000, Streams.copy(new ByteArrayInputStream(data), out, size));
             assertArrayEquals(data, out.toByteArray());
         }
         ByteArrayOutputStream out = new ByteArrayOutputStream();
-        assertEquals(1000, IOUtils.copy(new ByteArrayInputStream(data), out));
-        assertThrows(NullPointerException.class, () -> IOUtils.copy(null, out));
+        assertEquals(1000, Streams.copy(new ByteArrayInputStream(data), out));
+        assertThrows(NullPointerException.class, () -> Streams.copy(null, out));
     }
 
     @Test void boundedReadAll() throws IOException {
         byte[] ten = new byte[10];
-        assertEquals(10, IOUtils.readAll(new ByteArrayInputStream(ten), 10).length);
-        assertEquals(10, IOUtils.readAll(new ByteArrayInputStream(ten), 1000).length);
-        CapacityExceededException e = assertThrows(CapacityExceededException.class, () -> IOUtils.readAll(new ByteArrayInputStream(ten), 9));
+        assertEquals(10, Streams.readAll(new ByteArrayInputStream(ten), 10).length);
+        assertEquals(10, Streams.readAll(new ByteArrayInputStream(ten), 1000).length);
+        CapacityExceededException e = assertThrows(CapacityExceededException.class, () -> Streams.readAll(new ByteArrayInputStream(ten), 9));
         assertEquals(9, e.limit());
-        assertEquals(0, IOUtils.readAll(new ByteArrayInputStream(new byte[0]), 0).length);
-        assertThrows(CapacityExceededException.class, () -> IOUtils.readAll(new ByteArrayInputStream(ten), 0));
-        assertThrows(IllegalArgumentException.class, () -> IOUtils.readAll(new ByteArrayInputStream(ten), -1));
-        assertEquals(10, IOUtils.readAll(new ByteArrayInputStream(ten)).length);
+        assertEquals(0, Streams.readAll(new ByteArrayInputStream(new byte[0]), 0).length);
+        assertThrows(CapacityExceededException.class, () -> Streams.readAll(new ByteArrayInputStream(ten), 0));
+        assertThrows(IllegalArgumentException.class, () -> Streams.readAll(new ByteArrayInputStream(ten), -1));
+        assertEquals(10, Streams.readAll(new ByteArrayInputStream(ten)).length);
     }
 
     @Test void readExactly() throws IOException {
         byte[] data = {1, 2, 3, 4};
-        assertArrayEquals(new byte[]{1, 2}, IOUtils.readExactly(new ByteArrayInputStream(data), 2));
-        assertArrayEquals(data, IOUtils.readExactly(new ByteArrayInputStream(data), 4));
-        assertEquals(0, IOUtils.readExactly(new ByteArrayInputStream(data), 0).length);
-        assertThrows(EOFException.class, () -> IOUtils.readExactly(new ByteArrayInputStream(data), 5));
-        assertThrows(IllegalArgumentException.class, () -> IOUtils.readExactly(new ByteArrayInputStream(data), -1));
+        assertArrayEquals(new byte[]{1, 2}, Streams.readExactly(new ByteArrayInputStream(data), 2));
+        assertArrayEquals(data, Streams.readExactly(new ByteArrayInputStream(data), 4));
+        assertEquals(0, Streams.readExactly(new ByteArrayInputStream(data), 0).length);
+        assertThrows(EOFException.class, () -> Streams.readExactly(new ByteArrayInputStream(data), 5));
+        assertThrows(IllegalArgumentException.class, () -> Streams.readExactly(new ByteArrayInputStream(data), -1));
     }
 
     @Test void filesAndCloseQuietly() throws IOException {
         Path p = Files.createTempFile("snowsutil", ".bin");
         try {
-            IOUtils.writeFile(p, new byte[]{1, 2, 3});
-            assertArrayEquals(new byte[]{1, 2, 3}, IOUtils.readFile(p));
+            FileIO.writeFile(p, new byte[]{1, 2, 3});
+            assertArrayEquals(new byte[]{1, 2, 3}, FileIO.readFile(p));
         } finally {
             Files.deleteIfExists(p);
         }
-        assertThrows(NullPointerException.class, () -> IOUtils.readFile(null));
-        assertThrows(NullPointerException.class, () -> IOUtils.writeFile(Path.of("x"), null));
-        IOUtils.closeQuietly(null);
-        IOUtils.closeQuietly(() -> { throw new IllegalStateException("boom"); });
+        assertThrows(NullPointerException.class, () -> FileIO.readFile(null));
+        assertThrows(NullPointerException.class, () -> FileIO.writeFile(Path.of("x"), null));
+        Streams.closeQuietly(null);
+        Streams.closeQuietly(() -> { throw new IllegalStateException("boom"); });
     }
 
     // ---------------------------------------------------------------- Gzip
