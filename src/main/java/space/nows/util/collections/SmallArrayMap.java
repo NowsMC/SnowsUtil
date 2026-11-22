@@ -98,15 +98,19 @@ public class SmallArrayMap<K, V> {
     }
 
     /** Stores {@code value} only if {@code key} is absent. Returns the existing value, or {@code null} if it was absent. */
+    @SuppressWarnings("unchecked")
     public V putIfAbsent(K key, V value) {
-        if (containsKey(key)) return get(key);
+        int i = indexOf(key);
+        if (i >= 0) return (V) values[i];
         put(key, value);
         return null;
     }
 
+    @SuppressWarnings("unchecked")
     public V computeIfAbsent(K key, Function<? super K, ? extends V> mapping) {
         Objects.requireNonNull(mapping, "mapping");
-        if (containsKey(key)) return get(key);
+        int i = indexOf(key);
+        if (i >= 0) return (V) values[i];
         V created = mapping.apply(key);
         put(key, created);
         return created;
