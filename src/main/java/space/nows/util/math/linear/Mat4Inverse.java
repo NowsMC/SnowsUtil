@@ -16,7 +16,7 @@ public final class Mat4Inverse {
      */
     public static Mat4 invert(Mat4 target) {
         float[] m = target.m;
-        double[] a = new double[32];                    // [ M | I ], row-major, 8 columns
+        double[] a = new double[32];
         for (int r = 0; r < 4; r++) {
             for (int c = 0; c < 4; c++) a[r * 8 + c] = m[c * 4 + r];
             a[r * 8 + 4 + r] = 1.0;

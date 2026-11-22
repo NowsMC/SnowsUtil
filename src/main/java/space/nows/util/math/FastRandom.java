@@ -57,7 +57,7 @@ public final class FastRandom implements RandomGenerator {
         long range = (long) max - min;
         if (range <= Integer.MAX_VALUE) return min + nextInt((int) range);
         int r;
-        do { r = nextInt(); } while (r < min || r >= max);   // accepts more than half of all ints here
+        do { r = nextInt(); } while (r < min || r >= max);
         return r;
     }
 

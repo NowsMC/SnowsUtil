@@ -124,7 +124,7 @@ public final class Parallel {
 
         @Override protected void compute() {
             if (failed.get()) return;
-            long len = (long) end - start;   // may exceed Integer.MAX_VALUE
+            long len = (long) end - start;
             if (len <= grain) {
                 try {
                     for (int i = start; i < end; i++) body.accept(i);

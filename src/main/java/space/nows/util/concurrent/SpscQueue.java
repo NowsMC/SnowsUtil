@@ -90,7 +90,7 @@ public final class SpscQueue<E> {
 
     /** Consumer side. Removes everything currently queued. */
     public void clear() {
-        while (poll() != null) { /* discard */ }
+        while (poll() != null) { }
     }
 
     /** Approximate when called from a thread other than the producer or consumer; always within {@code [0, capacity()]}. */

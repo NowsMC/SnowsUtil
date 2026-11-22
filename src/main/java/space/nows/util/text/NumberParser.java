@@ -38,7 +38,6 @@ public final class NumberParser {
             neg = c0 == '-';
             if (++i == len) return fallback;
         }
-        // accumulate as a negative number so Long.MIN_VALUE needs no special case
         long limit = neg ? Long.MIN_VALUE : -Long.MAX_VALUE;
         long multMin = limit / 10;
         long result = 0;

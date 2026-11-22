@@ -37,8 +37,6 @@ public final class ByteBuf {
         writePos = wrap.length;
     }
 
-    // ---- state
-
     public int readableBytes() { return writePos - readPos; }
 
     public int capacity() { return data.length; }
@@ -93,8 +91,6 @@ public final class ByteBuf {
     /** Forgets all content (does not zero the memory). */
     public ByteBuf reset() { readPos = 0; writePos = 0; return this; }
 
-    // ---- write
-
     public ByteBuf writeByte(int v) { ensureWritable(1); data[writePos++] = (byte) v; return this; }
 
     public ByteBuf writeBoolean(boolean v) { return writeByte(v ? 1 : 0); }
@@ -143,8 +139,6 @@ public final class ByteBuf {
         writePos += len;
         return this;
     }
-
-    // ---- read
 
     public byte readByte() { ensureReadable(1); return data[readPos++]; }
 
@@ -208,8 +202,6 @@ public final class ByteBuf {
 
     /** Next byte without consuming it. */
     public byte peekByte() { ensureReadable(1); return data[readPos]; }
-
-    // ---- variable-length
 
     /** Unsigned LEB128, 1 to 5 bytes. Negative values always take 5; use {@link #writeZigZagInt} for values that are often negative. */
     public ByteBuf writeVarInt(int v) {
@@ -315,8 +307,6 @@ public final class ByteBuf {
         }
         return readUtf8(len);
     }
-
-    // ---- JDK bridges
 
     /** Copies a {@link ByteBuffer}'s remaining bytes into a new buffer without changing the source's position. */
     public static ByteBuf copyOf(ByteBuffer src) {

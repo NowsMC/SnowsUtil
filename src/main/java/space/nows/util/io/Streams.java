@@ -57,6 +57,6 @@ public final class Streams {
 
     public static void closeQuietly(AutoCloseable c) {
         if (c == null) return;
-        try { c.close(); } catch (Exception ignored) { /* best effort */ }
+        try { c.close(); } catch (Exception ignored) { }
     }
 }

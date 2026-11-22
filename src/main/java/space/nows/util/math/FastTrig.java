@@ -24,7 +24,7 @@ public final class FastTrig {
 
     private static float scaled(float radians) {
         float t = radians * TO_INDEX;
-        if (!(t > -INDEX_LIMIT && t < INDEX_LIMIT)) {   // false for NaN, +/-Infinity and huge values
+        if (!(t > -INDEX_LIMIT && t < INDEX_LIMIT)) {
             throw new IllegalArgumentException("radians out of supported range: " + radians);
         }
         return t;
