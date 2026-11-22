@@ -12,8 +12,6 @@ import java.io.OutputStream;
 public final class Streams {
     private Streams() {}
 
-    private static final int DEFAULT_BUFFER = 8192;
-
     public static byte[] readAll(InputStream in) throws IOException { return Preconditions.notNull(in, "in").readAllBytes(); }
 
     /** Reads the whole stream, but fails with {@link CapacityExceededException} instead of buffering more than {@code maxBytes}. */
@@ -36,7 +34,11 @@ public final class Streams {
         return data;
     }
 
-    public static long copy(InputStream in, OutputStream out) throws IOException { return copy(in, out, DEFAULT_BUFFER); }
+    public static long copy(InputStream in, OutputStream out) throws IOException {
+        Preconditions.notNull(in, "in");
+        Preconditions.notNull(out, "out");
+        return in.transferTo(out);
+    }
 
     /** Copies until EOF; {@code bufferSize} must be positive (a zero-length buffer would spin forever). */
     public static long copy(InputStream in, OutputStream out, int bufferSize) throws IOException {
