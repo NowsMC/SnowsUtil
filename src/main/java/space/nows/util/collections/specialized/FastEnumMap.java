@@ -1,17 +1,20 @@
 package space.nows.util.collections.specialized;
 
 import java.util.Arrays;
+import java.util.EnumMap;
 import java.util.Objects;
 import java.util.function.BiConsumer;
 
 public class FastEnumMap<E extends Enum<E>, V> {
+    private final Class<E> keyType;
     private final E[] universe;
     private final Object[] values;
     private final boolean[] present;
     private int size;
 
     public FastEnumMap(Class<E> keyType) {
-        this.universe = Objects.requireNonNull(keyType, "keyType").getEnumConstants();
+        this.keyType = Objects.requireNonNull(keyType, "keyType");
+        this.universe = keyType.getEnumConstants();
         if (universe == null) throw new IllegalArgumentException(keyType + " is not an enum");
         this.values = new Object[universe.length];
         this.present = new boolean[universe.length];
@@ -61,5 +64,30 @@ public class FastEnumMap<E extends Enum<E>, V> {
         for (int i = 0; i < universe.length; i++) {
             if (present[i]) action.accept(universe[i], (V) values[i]);
         }
+    }
+
+    /** Copy into the JDK's {@link EnumMap}. */
+    public EnumMap<E, V> toEnumMap() {
+        EnumMap<E, V> out = new EnumMap<>(keyType);
+        forEach(out::put);
+        return out;
+    }
+
+    /** Independent copy of the map (values are shared, not cloned). */
+    public FastEnumMap<E, V> copy() {
+        FastEnumMap<E, V> out = new FastEnumMap<>(keyType);
+        forEach(out::put);
+        return out;
+    }
+
+    @Override public String toString() {
+        StringBuilder sb = new StringBuilder("{");
+        boolean[] first = {true};
+        forEach((k, v) -> {
+            if (!first[0]) sb.append(", ");
+            first[0] = false;
+            sb.append(k).append('=').append(v);
+        });
+        return sb.append('}').toString();
     }
 }

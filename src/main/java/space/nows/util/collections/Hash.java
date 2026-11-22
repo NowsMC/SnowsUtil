@@ -1,5 +1,7 @@
 package space.nows.util.collections;
 
+import space.nows.util.error.CapacityExceededException;
+
 final class Hash {
     private Hash() {}
 
@@ -22,7 +24,7 @@ final class Hash {
         long need = (long) Math.ceil(expected / (double) lf) + 1;
         int cap = 4;
         while (cap < need) {
-            if (cap >= (1 << 30)) throw new IllegalStateException("capacity too large");
+            if (cap >= (1 << 30)) throw new CapacityExceededException("hash table", need, 1 << 30);
             cap <<= 1;
         }
         return cap;
@@ -38,5 +40,16 @@ final class Hash {
      */
     static boolean isMovable(int last, int pos, int slot) {
         return last <= pos ? (last >= slot || slot > pos) : (last >= slot && slot > pos);
+    }
+
+    /** Doubles a table size, failing cleanly instead of overflowing into a negative array length. */
+    static int grow(int cap) {
+        if (cap >= (1 << 30)) throw new CapacityExceededException("hash table", (long) cap << 1, 1 << 30);
+        return cap << 1;
+    }
+
+    /** Initial capacity for a JDK {@code HashMap}/{@code HashSet} that will hold {@code size} entries without resizing. */
+    static int javaMapCapacity(int size) {
+        return (int) Math.min(1 << 30, Math.max(16L, (long) (size / 0.75f) + 1));
     }
 }

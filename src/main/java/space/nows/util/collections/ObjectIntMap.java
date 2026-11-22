@@ -1,18 +1,21 @@
 package space.nows.util.collections;
 
 import java.util.Arrays;
+import java.util.ConcurrentModificationException;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Objects;
+import java.util.function.IntBinaryOperator;
+import java.util.function.ObjIntConsumer;
 
 public class ObjectIntMap<K> {
-    @FunctionalInterface
-    public interface Consumer<K> { void accept(K key, int value); }
-
     private final float loadFactor;
     private final int noEntryValue;
     private Object[] keys;
     private int[] values;
     private int mask;
     private int size;
+    private int modCount;
     private int threshold;
 
     public ObjectIntMap() { this(16); }
@@ -71,9 +74,10 @@ public class ObjectIntMap<K> {
             }
             pos = (pos + 1) & mask;
         }
+        modCount++;
         keys[pos] = key;
         values[pos] = value;
-        if (++size >= threshold) rehash(keys.length << 1);
+        if (++size >= threshold) rehash(Hash.grow(keys.length));
         return noEntryValue;
     }
 
@@ -85,9 +89,10 @@ public class ObjectIntMap<K> {
             if (k == key || k.equals(key)) return values[pos] += delta;
             pos = (pos + 1) & mask;
         }
+        modCount++;
         keys[pos] = key;
         values[pos] = delta;
-        if (++size >= threshold) rehash(keys.length << 1);
+        if (++size >= threshold) rehash(Hash.grow(keys.length));
         return delta;
     }
 
@@ -96,6 +101,7 @@ public class ObjectIntMap<K> {
         int pos = find(key);
         if (pos < 0) return noEntryValue;
         int old = values[pos];
+        modCount++;
         shiftDelete(pos);
         size--;
         return old;
@@ -142,13 +148,90 @@ public class ObjectIntMap<K> {
 
     public void clear() {
         Arrays.fill(keys, null);
+        modCount++;
         size = 0;
     }
 
     @SuppressWarnings("unchecked")
-    public void forEach(Consumer<? super K> action) {
-        for (int i = 0; i < keys.length; i++) {
-            if (keys[i] != null) action.accept((K) keys[i], values[i]);
+    public void forEach(ObjIntConsumer<? super K> action) {
+        Objects.requireNonNull(action, "action");
+        int mc = modCount;
+        Object[] ks = keys;
+        int[] vs = values;
+        for (int i = 0; i < ks.length; i++) {
+            if (ks[i] != null) {
+                action.accept((K) ks[i], vs[i]);
+                if (mc != modCount) throw new ConcurrentModificationException();
+            }
         }
+    }
+
+    /** Stores {@code value} only if {@code key} is absent. Returns the existing value, or the no-entry value if it was absent. */
+    public int putIfAbsent(K key, int value) {
+        if (containsKey(key)) return get(key);
+        put(key, value);
+        return noEntryValue;
+    }
+
+    /** Combines the existing value (if any) with {@code value}; stores and returns the result. */
+    public int merge(K key, int value, IntBinaryOperator remapping) {
+        Objects.requireNonNull(remapping, "remapping");
+        if (!containsKey(key)) {
+            put(key, value);
+            return value;
+        }
+        int merged = remapping.applyAsInt(get(key), value);
+        put(key, merged);
+        return merged;
+    }
+
+    /** Independent copy of the table (keys are shared, not cloned). */
+    public ObjectIntMap<K> copy() { return new ObjectIntMap<>(this); }
+
+    private ObjectIntMap(ObjectIntMap<K> o) {
+        loadFactor = o.loadFactor;
+        noEntryValue = o.noEntryValue;
+        keys = o.keys.clone();
+        values = o.values.clone();
+        mask = o.mask;
+        size = o.size;
+        threshold = o.threshold;
+    }
+
+    /** Boxed snapshot for handing to JDK APIs. */
+    public Map<K, Integer> toJavaMap() {
+        Map<K, Integer> out = new HashMap<>(Hash.javaMapCapacity(size()));
+        forEach(out::put);
+        return out;
+    }
+
+    @Override public boolean equals(Object o) {
+        if (o == this) return true;
+        if (!(o instanceof ObjectIntMap<?> m) || m.size() != size()) return false;
+        for (int i = 0; i < keys.length; i++) {
+            if (keys[i] != null) {
+                int pos = m.find(keys[i]);
+                if (pos < 0 || m.values[pos] != values[i]) return false;
+            }
+        }
+        return true;
+    }
+
+    /** Same value as {@code Map<K,Integer>.hashCode()} for equal contents. */
+    @Override public int hashCode() {
+        int h = 0;
+        for (int i = 0; i < keys.length; i++) if (keys[i] != null) h += keys[i].hashCode() ^ values[i];
+        return h;
+    }
+
+    @Override public String toString() {
+        StringBuilder sb = new StringBuilder("{");
+        boolean[] first = {true};
+        forEach((k, v) -> {
+            if (!first[0]) sb.append(", ");
+            first[0] = false;
+            sb.append(k).append('=').append(v);
+        });
+        return sb.append('}').toString();
     }
 }

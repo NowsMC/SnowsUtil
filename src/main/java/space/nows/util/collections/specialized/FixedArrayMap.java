@@ -1,11 +1,18 @@
 package space.nows.util.collections.specialized;
 
+import space.nows.util.error.KeyOutOfRangeException;
+import space.nows.util.function.IntObjConsumer;
+
 import java.util.Arrays;
+import java.util.Map;
+import java.util.TreeMap;
 
+/**
+ * Map from {@code int} keys in a fixed range {@code [minKey, maxKey]} to values, backed by a plain array.
+ * {@link #put} rejects keys outside the range with {@link KeyOutOfRangeException}; {@link #get}, {@link #containsKey}
+ * and {@link #remove} treat such keys as absent, like any other map.
+ */
 public class FixedArrayMap<V> {
-    @FunctionalInterface
-    public interface Consumer<V> { void accept(int key, V value); }
-
     private final int minKey;
     private final Object[] values;
     private final boolean[] present;
@@ -23,7 +30,7 @@ public class FixedArrayMap<V> {
     private int index(int key) {
         int i = key - minKey;
         if (key < minKey || i < 0 || i >= values.length) {
-            throw new IndexOutOfBoundsException("key " + key + " outside [" + minKey + ", " + (minKey + values.length - 1) + "]");
+            throw new KeyOutOfRangeException(key, minKey, maxKey());
         }
         return i;
     }
@@ -76,9 +83,31 @@ public class FixedArrayMap<V> {
     }
 
     @SuppressWarnings("unchecked")
-    public void forEach(Consumer<? super V> action) {
+    public void forEach(IntObjConsumer<? super V> action) {
         for (int i = 0; i < values.length; i++) {
             if (present[i]) action.accept(minKey + i, (V) values[i]);
         }
+    }
+
+    public int minKey() { return minKey; }
+
+    public int maxKey() { return minKey + (values.length - 1); }
+
+    /** Sorted boxed snapshot for handing to JDK APIs. */
+    public Map<Integer, V> toJavaMap() {
+        Map<Integer, V> out = new TreeMap<>();
+        forEach(out::put);
+        return out;
+    }
+
+    @Override public String toString() {
+        StringBuilder sb = new StringBuilder("{");
+        boolean[] first = {true};
+        forEach((k, v) -> {
+            if (!first[0]) sb.append(", ");
+            first[0] = false;
+            sb.append(k).append('=').append(v);
+        });
+        return sb.append('}').toString();
     }
 }

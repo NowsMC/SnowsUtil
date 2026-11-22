@@ -1,16 +1,20 @@
 package space.nows.util.collections;
 
 import java.util.Arrays;
+import java.util.ConcurrentModificationException;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Objects;
+import java.util.function.IntFunction;
+import space.nows.util.function.IntObjConsumer;
 
 public class IntObjectMap<V> {
-    @FunctionalInterface
-    public interface Consumer<V> { void accept(int key, V value); }
-
     private final float loadFactor;
     private int[] keys;
     private Object[] values;
     private int mask;
     private int size;
+    private int modCount;
     private int threshold;
     private boolean hasZero;
     private V zeroValue;
@@ -64,6 +68,7 @@ public class IntObjectMap<V> {
     public V put(int key, V value) {
         if (key == 0) {
             V old = hasZero ? zeroValue : null;
+            if (!hasZero) modCount++;
             hasZero = true;
             zeroValue = value;
             return old;
@@ -78,9 +83,10 @@ public class IntObjectMap<V> {
             }
             pos = (pos + 1) & mask;
         }
+        modCount++;
         keys[pos] = key;
         values[pos] = value;
-        if (++size >= threshold) rehash(keys.length << 1);
+        if (++size >= threshold) rehash(Hash.grow(keys.length));
         return null;
     }
 
@@ -89,6 +95,7 @@ public class IntObjectMap<V> {
         if (key == 0) {
             if (!hasZero) return null;
             V old = zeroValue;
+            if (hasZero) modCount++;
             hasZero = false;
             zeroValue = null;
             return old;
@@ -96,6 +103,7 @@ public class IntObjectMap<V> {
         int pos = find(key);
         if (pos < 0) return null;
         V old = (V) values[pos];
+        modCount++;
         shiftDelete(pos);
         size--;
         return old;
@@ -142,16 +150,107 @@ public class IntObjectMap<V> {
     public void clear() {
         Arrays.fill(keys, 0);
         Arrays.fill(values, null);
+        modCount++;
         size = 0;
+        if (hasZero) modCount++;
         hasZero = false;
         zeroValue = null;
     }
 
     @SuppressWarnings("unchecked")
-    public void forEach(Consumer<? super V> action) {
-        if (hasZero) action.accept(0, zeroValue);
-        for (int i = 0; i < keys.length; i++) {
-            if (keys[i] != 0) action.accept(keys[i], (V) values[i]);
+    public void forEach(IntObjConsumer<? super V> action) {
+        Objects.requireNonNull(action, "action");
+        int mc = modCount;
+        if (hasZero) {
+            action.accept(0, zeroValue);
+            if (mc != modCount) throw new ConcurrentModificationException();
         }
+        int[] ks = keys;
+        Object[] vs = values;
+        for (int i = 0; i < ks.length; i++) {
+            if (ks[i] != 0) {
+                action.accept(ks[i], (V) vs[i]);
+                if (mc != modCount) throw new ConcurrentModificationException();
+            }
+        }
+    }
+
+    public int[] keys() {
+        int[] out = new int[size()];
+        int n = 0;
+        if (hasZero) out[n++] = 0;
+        for (int k : keys) if (k != 0) out[n++] = k;
+        return out;
+    }
+
+    /** Stores {@code value} only if {@code key} is absent. Returns the existing value, or {@code null} if it was absent. */
+    public V putIfAbsent(int key, V value) {
+        if (containsKey(key)) return get(key);
+        put(key, value);
+        return null;
+    }
+
+    /** Returns the value for {@code key}, computing and storing it first if absent. */
+    public V computeIfAbsent(int key, IntFunction<? extends V> mapping) {
+        Objects.requireNonNull(mapping, "mapping");
+        if (containsKey(key)) return get(key);
+        V created = mapping.apply(key);
+        put(key, created);
+        return created;
+    }
+
+    /** Independent copy of the table (values are shared, not cloned). */
+    public IntObjectMap<V> copy() { return new IntObjectMap<>(this); }
+
+    private IntObjectMap(IntObjectMap<V> o) {
+        loadFactor = o.loadFactor;
+        keys = o.keys.clone();
+        values = o.values.clone();
+        mask = o.mask;
+        size = o.size;
+        threshold = o.threshold;
+        hasZero = o.hasZero;
+        zeroValue = o.zeroValue;
+    }
+
+    /** Boxed snapshot for handing to JDK APIs. */
+    public Map<Integer, V> toJavaMap() {
+        Map<Integer, V> out = new HashMap<>(Hash.javaMapCapacity(size()));
+        forEach(out::put);
+        return out;
+    }
+
+    @Override public boolean equals(Object o) {
+        if (o == this) return true;
+        if (!(o instanceof IntObjectMap<?> m) || m.size() != size()) return false;
+        if (hasZero && (!m.hasZero || !Objects.equals(zeroValue, m.zeroValue))) return false;
+        for (int i = 0; i < keys.length; i++) {
+            int k = keys[i];
+            if (k != 0) {
+                int pos = m.find(k);
+                if (pos < 0 || !Objects.equals(values[i], m.values[pos])) return false;
+            }
+        }
+        return true;
+    }
+
+    /** Same value as {@code Map<K,V>.hashCode()} for equal contents. */
+    @Override public int hashCode() {
+        int h = hasZero ? 0 ^ Objects.hashCode(zeroValue) : 0;
+        for (int i = 0; i < keys.length; i++) {
+            if (keys[i] != 0) h += keys[i] ^ Objects.hashCode(values[i]);
+        }
+        return h;
+    }
+
+    @Override public String toString() {
+        StringBuilder sb = new StringBuilder("{");
+        boolean[] first = {true};
+        forEach((k, v) -> {
+            if (!first[0]) sb.append(", ");
+            first[0] = false;
+            sb.append(k).append('=').append(v);
+        });
+        return sb.append('}').toString();
     }
 }

@@ -1,6 +1,12 @@
 package space.nows.util.collections.specialized;
 
+import space.nows.util.error.Checks;
+
 import java.util.Arrays;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.Objects;
+import java.util.function.Function;
 import java.util.function.BiConsumer;
 
 public class CompactHashMap<K, V> {
@@ -11,7 +17,7 @@ public class CompactHashMap<K, V> {
     public CompactHashMap() { this(4); }
 
     public CompactHashMap(int initialCapacity) {
-        int cap = Math.max(1, initialCapacity);
+        int cap = Math.max(1, Checks.nonNegative(initialCapacity, "initialCapacity"));
         keys = new Object[cap];
         values = new Object[cap];
     }
@@ -84,5 +90,44 @@ public class CompactHashMap<K, V> {
     @SuppressWarnings("unchecked")
     public void forEach(BiConsumer<? super K, ? super V> action) {
         for (int i = 0; i < size; i++) action.accept((K) keys[i], (V) values[i]);
+    }
+
+    /** Stores {@code value} only if {@code key} is absent. Returns the existing value, or {@code null} if it was absent. */
+    public V putIfAbsent(K key, V value) {
+        if (containsKey(key)) return get(key);
+        put(key, value);
+        return null;
+    }
+
+    public V computeIfAbsent(K key, Function<? super K, ? extends V> mapping) {
+        Objects.requireNonNull(mapping, "mapping");
+        if (containsKey(key)) return get(key);
+        V created = mapping.apply(key);
+        put(key, created);
+        return created;
+    }
+
+    public CompactHashMap<K, V> copy() {
+        CompactHashMap<K, V> out = new CompactHashMap<>(Math.max(1, size));
+        forEach(out::put);
+        return out;
+    }
+
+    /** Snapshot in this map's current (arbitrary) order. */
+    public Map<K, V> toJavaMap() {
+        Map<K, V> out = new LinkedHashMap<>();
+        forEach(out::put);
+        return out;
+    }
+
+    @Override public String toString() {
+        StringBuilder sb = new StringBuilder("{");
+        boolean[] first = {true};
+        forEach((k, v) -> {
+            if (!first[0]) sb.append(", ");
+            first[0] = false;
+            sb.append(k).append('=').append(v);
+        });
+        return sb.append('}').toString();
     }
 }
