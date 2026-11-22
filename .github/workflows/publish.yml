@@ -56,6 +56,27 @@ jobs:
             exit 1
           fi
 
+      - name: Extract release notes
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          awk -v version="$version" '
+            /^## / {
+              if (found) exit
+              if ($2 == version) { found = 1; next }
+            }
+            found { print }
+          ' CHANGELOG.md > release-notes.md
+          if [[ ! -s release-notes.md ]]; then
+            echo "No CHANGELOG.md section found for $version." >&2
+            exit 1
+          fi
+
+      - name: Upload release notes
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-notes
+          path: release-notes.md
+
       - name: Build and test before publishing
         run: ./mvnw --batch-mode --no-transfer-progress verify
 
@@ -188,3 +209,25 @@ jobs:
           -Dgpg.keyname="$SIGNING_FINGERPRINT"
           -DskipTests
           deploy
+
+  release:
+    needs: publish
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - name: Download release notes
+        uses: actions/download-artifact@v4
+        with:
+          name: release-notes
+
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: >
+          gh release create "$GITHUB_REF_NAME"
+          --repo "$GITHUB_REPOSITORY"
+          --title "$GITHUB_REF_NAME"
+          --notes-file release-notes.md
+          --verify-tag
