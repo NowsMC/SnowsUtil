@@ -35,7 +35,7 @@ class BitsTest {
             }
         }
         assertEquals(ref, BitSetConversions.toBitSet(bits));
-        assertEquals(ref.previousSetBit(10_000), BitSearch.previousSetBit(bits, 10_000));   // from beyond the end is clamped
+        assertEquals(ref.previousSetBit(10_000), BitSearch.previousSetBit(bits, 10_000));
         assertEquals(-1, BitSearch.previousSetBit(bits, -1));
     }
 
@@ -74,7 +74,7 @@ class BitsTest {
         assertEquals(1, BitArrays.create(1).length);
         assertEquals(1, BitArrays.create(64).length);
         assertEquals(2, BitArrays.create(65).length);
-        BitRanges.setRange(bits, 7, 7);                          // empty range is a no-op
+        BitRanges.setRange(bits, 7, 7);
         assertTrue(BitArrays.isEmpty(bits));
         assertEquals(-1, BitSearch.nextSetBit(new long[0], 0));
         assertEquals(-1, BitSearch.previousSetBit(new long[0], 5));
@@ -86,7 +86,7 @@ class BitsTest {
         BitSet jdk = BitSetConversions.toBitSet(bits);
         assertTrue(jdk.get(99));
         assertArrayEquals(bits, BitSetConversions.fromBitSet(jdk, 100));
-        assertEquals(4, BitSetConversions.fromBitSet(jdk, 200).length);                  // larger target pads with zero words
+        assertEquals(4, BitSetConversions.fromBitSet(jdk, 200).length);
         assertThrows(IllegalArgumentException.class, () -> BitSetConversions.fromBitSet(jdk, 99));
         assertThrows(NullPointerException.class, () -> BitSetConversions.fromBitSet(null, 10));
     }
@@ -96,7 +96,7 @@ class BitsTest {
         assertEquals(1, IntBits.clearBit(5, 2));
         assertEquals(4, IntBits.toggleBit(0, 2));
         assertTrue(IntBits.isSet(0x80000000, 31));
-        assertThrows(IndexOutOfBoundsException.class, () -> IntBits.setBit(0, 32));    // used to set bit 0
+        assertThrows(IndexOutOfBoundsException.class, () -> IntBits.setBit(0, 32));
         assertThrows(IndexOutOfBoundsException.class, () -> IntBits.isSet(1, 32));
         assertThrows(IndexOutOfBoundsException.class, () -> IntBits.clearBit(1, -1));
         assertEquals(4, IntBits.lowestSetBit(12));
@@ -123,7 +123,7 @@ class BitsTest {
             int offset = r.nextInt(32), width = r.nextInt(33 - offset), value = r.nextInt(), field = r.nextInt();
             int put = BitField.deposit(value, offset, width, field);
             assertEquals(field & BitField.mask(width), BitField.extract(put, offset, width));
-            assertEquals(value & ~(BitField.mask(width) << offset), put & ~(BitField.mask(width) << offset));   // bits outside the field are untouched
+            assertEquals(value & ~(BitField.mask(width) << offset), put & ~(BitField.mask(width) << offset));
         }
     }
 

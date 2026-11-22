@@ -33,7 +33,7 @@ class ArrayGuardsTest {
         assertEquals(1, a[0]);
         assertArrayEquals(new int[]{3, 4}, ArrayEdit.concat(new int[]{3}, new int[]{4}));
         assertArrayEquals(new int[]{1, 2, 3, 4, 5}, ArrayEdit.append(a, 5));
-        assertEquals(3, ArraySearch.indexOf(a, 4, -10));          // negative start is clamped
+        assertEquals(3, ArraySearch.indexOf(a, 4, -10));
         assertEquals(-1, ArraySearch.indexOf(a, 1, 1));
         assertTrue(ArraySearch.contains(a, 3));
         assertEquals(1, ArrayOrder.min(a));
@@ -58,8 +58,8 @@ class ArrayGuardsTest {
         assertThrows(IndexOutOfBoundsException.class, () -> ArrayEdit.remove(new int[0], 0));
         assertThrows(IndexOutOfBoundsException.class, () -> ArrayEdit.insert(a, 4, 0));
         assertThrows(IndexOutOfBoundsException.class, () -> ArrayEdit.insert(a, -1, 0));
-        assertThrows(IndexOutOfBoundsException.class, () -> ArrayEdit.swapRemove(a, 0, 4));   // size beyond the array
-        assertThrows(IndexOutOfBoundsException.class, () -> ArrayEdit.swapRemove(a, 2, 2));   // index beyond size
+        assertThrows(IndexOutOfBoundsException.class, () -> ArrayEdit.swapRemove(a, 0, 4));
+        assertThrows(IndexOutOfBoundsException.class, () -> ArrayEdit.swapRemove(a, 2, 2));
         assertThrows(IndexOutOfBoundsException.class, () -> ArrayReorder.reverse(a, 2, 1));
         assertThrows(IndexOutOfBoundsException.class, () -> ArrayCopy.copy(a, Integer.MAX_VALUE, new int[2], 0, 2));
         assertThrows(IndexOutOfBoundsException.class, () -> ArrayCopy.copy(a, 0, new int[2], 0, 3));
@@ -76,7 +76,6 @@ class ArrayGuardsTest {
         int[] grown = ArrayResize.ensureCapacity(a, 4);
         assertTrue(grown.length >= 4);
         assertArrayEquals(a, java.util.Arrays.copyOf(grown, 3));
-        // formerly this silently returned an array of the maximum length, i.e. SMALLER than requested
         CapacityExceededException e = assertThrows(CapacityExceededException.class, () -> ArrayResize.ensureCapacity(a, Integer.MAX_VALUE));
         assertEquals(Integer.MAX_VALUE, e.requested());
         assertThrows(CapacityExceededException.class, () -> ArrayResize.ensureCapacity(new String[0], Integer.MAX_VALUE - 7));
@@ -95,8 +94,8 @@ class ArrayGuardsTest {
     }
 
     @Test void byteArraysAreUnsignedAwareWhereItMatters() {
-        assertTrue(ArrayOrder.compareUnsigned(new byte[]{(byte) 0xFF}, new byte[]{0x01}) > 0);   // unsigned comparison
-        assertEquals(-1, ArrayOrder.min(new byte[]{1, -1, 5}));                            // min/max are signed, like the type
+        assertTrue(ArrayOrder.compareUnsigned(new byte[]{(byte) 0xFF}, new byte[]{0x01}) > 0);
+        assertEquals(-1, ArrayOrder.min(new byte[]{1, -1, 5}));
         assertEquals(5, ArrayOrder.max(new byte[]{1, -1, 5}));
         byte[] hay = {1, 2, 3, 2, 3, 4};
         assertEquals(1, ArraySearch.indexOf(hay, new byte[]{2, 3}));
@@ -123,7 +122,7 @@ class ArrayGuardsTest {
 
         String[] t = {"p", "q", "r"};
         assertEquals(2, ArrayEdit.swapRemove(t, 0, 3));
-        assertArrayEquals(new Object[]{"r", "q", null}, t);   // vacated slot is nulled so it cannot leak
+        assertArrayEquals(new Object[]{"r", "q", null}, t);
         ArrayReorder.reverse(t);
         assertArrayEquals(new Object[]{null, "q", "r"}, t);
         assertThrows(IndexOutOfBoundsException.class, () -> ArrayEdit.remove(new String[0], 0));

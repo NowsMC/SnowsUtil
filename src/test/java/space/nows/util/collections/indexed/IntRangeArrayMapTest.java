@@ -16,7 +16,6 @@ class IntRangeArrayMapTest {
         assertEquals(10, e.min());
         assertEquals(20, e.max());
         assertThrows(IndexOutOfBoundsException.class, () -> m.put(9, "x"));
-        // lookups follow Map semantics: an out-of-range key is simply absent
         assertNull(m.get(9));
         assertNull(m.remove(-1));
         assertFalse(m.containsKey(21));

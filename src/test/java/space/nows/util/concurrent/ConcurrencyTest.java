@@ -12,19 +12,18 @@ import java.util.concurrent.atomic.LongAdder;
 import static org.junit.jupiter.api.Assertions.*;
 
 class ConcurrencyTest {
-    // ---------------------------------------------------------------- SpscQueue
     @Test void singleThreadedSemantics() {
         SpscQueue<Integer> q = new SpscQueue<>(5);
-        assertEquals(8, q.capacity());                                    // rounded up to a power of two
+        assertEquals(8, q.capacity());
         assertTrue(q.isEmpty());
         assertNull(q.poll());
         assertNull(q.peek());
         for (int i = 0; i < 8; i++) assertTrue(q.offer(i));
-        assertFalse(q.offer(99));                                         // full
+        assertFalse(q.offer(99));
         assertEquals(8, q.size());
         assertEquals(0, q.remainingCapacity());
         assertEquals(0, q.peek());
-        assertEquals(0, q.peek());                                        // peek does not remove
+        assertEquals(0, q.peek());
         for (int i = 0; i < 8; i++) assertEquals(i, q.poll());
         assertNull(q.poll());
         assertTrue(q.isEmpty());
@@ -38,7 +37,7 @@ class ConcurrencyTest {
         assertEquals(List.of(0, 1, 2, 3), got);
         assertEquals(6, q.size());
         assertEquals(0, q.drain(got::add, 0));
-        assertEquals(6, q.drain(got::add, 100));                          // stops when the queue runs dry
+        assertEquals(6, q.drain(got::add, 100));
         assertEquals(10, got.size());
         for (int i = 0; i < 5; i++) q.offer(i);
         q.clear();
@@ -95,7 +94,6 @@ class ConcurrencyTest {
         assertTrue(q.isEmpty());
     }
 
-    // ---------------------------------------------------------------- Parallel
     @Test void everyIndexIsVisitedExactlyOnce() {
         int n = 100_000;
         int[] hits = new int[n];
@@ -110,7 +108,7 @@ class ConcurrencyTest {
     @Test void offsetRangesAndNegativeStarts() {
         AtomicInteger sum = new AtomicInteger();
         Parallel.forRange(-500, 500, 16, sum::addAndGet);
-        assertEquals(-500, sum.get());                                    // sum of -500..499
+        assertEquals(-500, sum.get());
         AtomicInteger calls = new AtomicInteger();
         Parallel.forRange(5, 5, 4, i -> calls.incrementAndGet());
         Parallel.forRange(9, 3, 4, i -> calls.incrementAndGet());
@@ -118,8 +116,6 @@ class ConcurrencyTest {
     }
 
     @Test void wideRangesAreSplitInsteadOfRunSequentially() {
-        // [-2e9, 2e9) is wider than Integer.MAX_VALUE. If the width overflowed, the range would be mistaken for a small one
-        // and run sequentially from -2e9, needing ~2e9 calls to reach index 0. Split correctly, the right half starts at once.
         ForkJoinPool pool = new ForkJoinPool(4);
         LongAdder calls = new LongAdder();
         try {
@@ -153,7 +149,7 @@ class ConcurrencyTest {
         assertThrows(IllegalStateException.class, () -> Parallel.forRange(0, 100_000, 64, i -> {
             if (i == 5_000) throw new IllegalStateException("boom");
         }));
-        assertThrows(IllegalArgumentException.class, () -> Parallel.forRange(0, 10, 1000, i -> {          // sequential fast path too
+        assertThrows(IllegalArgumentException.class, () -> Parallel.forRange(0, 10, 1000, i -> {
             if (i == 3) throw new IllegalArgumentException("small");
         }));
     }
@@ -162,8 +158,6 @@ class ConcurrencyTest {
         ForkJoinPool pool = new ForkJoinPool(4);
         AtomicInteger calls = new AtomicInteger();
         try {
-            // the failure is at the start of the RIGHT half; the left half is deliberately slow, so without skipping
-            // it would run all 5,000,000 of its iterations before the exception could reach the caller
             assertThrows(IllegalStateException.class, () -> Parallel.forRange(pool, 0, 10_000_000, 1_000, i -> {
                 calls.incrementAndGet();
                 if (i == 5_000_000) throw new IllegalStateException("fail in the right half");

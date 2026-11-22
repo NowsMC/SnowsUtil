@@ -19,7 +19,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import static org.junit.jupiter.api.Assertions.*;
 
 class HashMapsExtrasTest {
-    // ---------------------------------------------------------------- construction guards
     @Test void invalidConstructorArguments() {
         assertThrows(IllegalArgumentException.class, () -> new IntIntMap(-1));
         assertThrows(IllegalArgumentException.class, () -> new IntIntMap(4, 0f, 0));
@@ -41,13 +40,12 @@ class HashMapsExtrasTest {
         assertThrows(NullPointerException.class, () -> new IntIntMap().merge(1, 1, null));
     }
 
-    // ---------------------------------------------------------------- randomized differential tests (tiny key range = many collisions)
     @Test void intIntMapDifferential() {
         Random r = new Random(1);
         IntIntMap m = new IntIntMap();
         Map<Integer, Integer> ref = new HashMap<>();
         for (int i = 0; i < 200_000; i++) {
-            int key = r.nextInt(64) - 8;               // includes 0 and negative keys
+            int key = r.nextInt(64) - 8;
             switch (r.nextInt(5)) {
                 case 0, 1 -> { int v = r.nextInt(); Integer old = ref.put(key, v); assertEquals(old == null ? 0 : old, m.put(key, v)); }
                 case 2 -> { Integer old = ref.remove(key); assertEquals(old == null ? 0 : old, m.remove(key)); }
@@ -134,7 +132,6 @@ class HashMapsExtrasTest {
         assertEquals(ref.stream().mapToLong(Integer::longValue).sum(), s.stream().asLongStream().sum());
     }
 
-    // ---------------------------------------------------------------- new operations
     @Test void putIfAbsentAndMerge() {
         IntIntMap m = new IntIntMap();
         assertEquals(0, m.putIfAbsent(1, 10));
@@ -143,7 +140,7 @@ class HashMapsExtrasTest {
         assertEquals(5, m.merge(2, 5, Integer::sum));
         assertEquals(8, m.merge(2, 3, Integer::sum));
         assertEquals(8, m.get(2));
-        assertEquals(1, m.merge(0, 1, Integer::sum));            // zero key takes the special path
+        assertEquals(1, m.merge(0, 1, Integer::sum));
         assertEquals(4, m.merge(0, 3, Integer::sum));
 
         ObjectIntMap<String> o = new ObjectIntMap<>();
@@ -215,7 +212,7 @@ class HashMapsExtrasTest {
         IntIntMap a = new IntIntMap(), b = new IntIntMap(1000);
         for (int i = -5; i < 40; i++) { a.put(i, i * 2); b.put(39 - (i + 5) - 5 + 5 - 5 + 0, 0); }
         b.clear();
-        for (int i = 39; i >= -5; i--) b.put(i, i * 2);        // same content, different insertion order and capacity
+        for (int i = 39; i >= -5; i--) b.put(i, i * 2);
         assertEquals(a, b);
         assertEquals(a.hashCode(), b.hashCode());
         b.put(1, -1);
@@ -236,7 +233,6 @@ class HashMapsExtrasTest {
         assertEquals("{a=1}", o.toString());
     }
 
-    // ---------------------------------------------------------------- fail-fast behaviour
     @Test void structuralChangeDuringForEachFailsFast() {
         IntIntMap m = new IntIntMap();
         for (int i = 1; i <= 10; i++) m.put(i, i);
@@ -244,7 +240,7 @@ class HashMapsExtrasTest {
 
         IntIntMap one = new IntIntMap();
         one.put(1, 1);
-        assertThrows(ConcurrentModificationException.class, () -> one.forEach((k, v) -> one.remove(k)));   // even for the last element
+        assertThrows(ConcurrentModificationException.class, () -> one.forEach((k, v) -> one.remove(k)));
 
         IntIntMap zero = new IntIntMap();
         zero.put(0, 1);
