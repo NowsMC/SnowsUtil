@@ -4,9 +4,11 @@ package space.nows.util.math;
 public final class Interpolation {
     private Interpolation() {}
 
-    public static float lerp(float a, float b, float t) { return a + (b - a) * t; }
+    /** Exact at both ends: {@code lerp(a, b, 0) == a} and {@code lerp(a, b, 1) == b}; monotonic in {@code t}. */
+    public static float lerp(float a, float b, float t) { return t < 0.5f ? a + (b - a) * t : b - (b - a) * (1f - t); }
 
-    public static double lerp(double a, double b, double t) { return a + (b - a) * t; }
+    /** Exact at both ends: {@code lerp(a, b, 0) == a} and {@code lerp(a, b, 1) == b}; monotonic in {@code t}. */
+    public static double lerp(double a, double b, double t) { return t < 0.5 ? a + (b - a) * t : b - (b - a) * (1.0 - t); }
 
     public static float inverseLerp(float a, float b, float value) {
         return a == b ? 0f : (value - a) / (b - a);

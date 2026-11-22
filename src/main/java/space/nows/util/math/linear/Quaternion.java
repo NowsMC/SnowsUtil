@@ -15,10 +15,18 @@ public final class Quaternion {
 
     public Quaternion identity() { return set(0f, 0f, 0f, 1f); }
 
+    /**
+     * Sets a rotation of {@code radians} about the axis {@code (ax, ay, az)}, which need not be normalized.
+     *
+     * @throws IllegalArgumentException if the axis has zero or non-finite length
+     */
     public Quaternion setFromAxisAngle(float ax, float ay, float az, float radians) {
+        float length = (float) Math.sqrt(ax * ax + ay * ay + az * az);
+        if (!(length > 0f) || Float.isInfinite(length)) throw new IllegalArgumentException("axis must have a finite, non-zero length");
+        float inv = 1f / length;
         float half = radians * 0.5f;
         float s = (float) Math.sin(half);
-        return set(ax * s, ay * s, az * s, (float) Math.cos(half));
+        return set(ax * inv * s, ay * inv * s, az * inv * s, (float) Math.cos(half));
     }
 
     public float lengthSq() { return x * x + y * y + z * z + w * w; }

@@ -17,5 +17,8 @@ public final class Modulo {
     }
 
     /** Wraps {@code v} into {@code [min, max)}. */
-    public static float wrap(float v, float min, float max) { return min + mod(v - min, max - min); }
+    public static float wrap(float v, float min, float max) {
+        float r = min + mod(v - min, max - min);
+        return r < max ? r : Math.nextDown(max);
+    }
 }
