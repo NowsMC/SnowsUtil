@@ -4,13 +4,13 @@ package space.nows.util.math;
 public final class Rounding {
     private Rounding() {}
 
-    public static int floor(float v) { int i = (int) v; return (v < i && i != Integer.MIN_VALUE) ? i - 1 : i; }
+    public static int floor(float v) { return (int) Math.floor(v); }
 
-    public static int floor(double v) { int i = (int) v; return (v < i && i != Integer.MIN_VALUE) ? i - 1 : i; }
+    public static int floor(double v) { return (int) Math.floor(v); }
 
-    public static int ceil(float v) { int i = (int) v; return (v > i && i != Integer.MAX_VALUE) ? i + 1 : i; }
+    public static int ceil(float v) { return (int) Math.ceil(v); }
 
-    public static int ceil(double v) { int i = (int) v; return (v > i && i != Integer.MAX_VALUE) ? i + 1 : i; }
+    public static int ceil(double v) { return (int) Math.ceil(v); }
 
     /** Round half up; exact (unlike {@code floor(v + 0.5f)}, which misrounds 0.49999997f) because it is the JDK's {@link Math#round(float)}. */
     public static int round(float v) { return Math.round(v); }
