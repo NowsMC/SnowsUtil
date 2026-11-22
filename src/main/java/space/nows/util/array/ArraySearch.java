@@ -1,5 +1,8 @@
 package space.nows.util.array;
 
+import space.nows.util.io.ByteAccess;
+
+import java.util.Arrays;
 import java.util.Objects;
 
 /** Linear search for values in arrays, and sub-sequence search for {@code byte[]}. */
@@ -10,7 +13,17 @@ public final class ArraySearch {
 
     /** First index {@code >= from} holding {@code value}, or -1. A negative {@code from} is treated as 0. */
     public static int indexOf(byte[] a, byte value, int from) {
-        for (int i = Math.max(from, 0); i < a.length; i++) if (a[i] == value) return i;
+        int n = a.length;
+        int i = Math.max(from, 0);
+        if (n - i >= 8) {
+            long pattern = (value & 0xFFL) * 0x0101010101010101L;
+            for (int limit = n - 8; i <= limit; i += 8) {
+                long x = ByteAccess.readLongLE(a, i) ^ pattern;
+                long hit = (x - 0x0101010101010101L) & ~x & 0x8080808080808080L;
+                if (hit != 0L) return i + (Long.numberOfTrailingZeros(hit) >>> 3);
+            }
+        }
+        for (; i < n; i++) if (a[i] == value) return i;
         return -1;
     }
 
@@ -76,11 +89,9 @@ public final class ArraySearch {
         if (from < 0) from = 0;
         if (m == 0) return Math.min(from, n);
         byte first = pattern[0];
-        for (int i = from, max = n - m; i <= max; i++) {
-            if (data[i] != first) continue;
-            int j = 1;
-            while (j < m && data[i + j] == pattern[j]) j++;
-            if (j == m) return i;
+        int max = n - m;
+        for (int i = indexOf(data, first, from); i >= 0 && i <= max; i = indexOf(data, first, i + 1)) {
+            if (Arrays.equals(data, i + 1, i + m, pattern, 1, m)) return i;
         }
         return -1;
     }
