@@ -4,12 +4,14 @@ import space.nows.util.error.CapacityExceededException;
 import space.nows.util.check.Preconditions;
 import space.nows.util.error.InvalidHexException;
 
+import java.nio.charset.StandardCharsets;
+
 /** Hexadecimal encoding and strict (ASCII-only) decoding of byte arrays. */
 public final class Hex {
     private Hex() {}
 
-    private static final char[] LOWER = "0123456789abcdef".toCharArray();
-    private static final char[] UPPER = "0123456789ABCDEF".toCharArray();
+    private static final byte[] LOWER = "0123456789abcdef".getBytes(StandardCharsets.ISO_8859_1);
+    private static final byte[] UPPER = "0123456789ABCDEF".getBytes(StandardCharsets.ISO_8859_1);
 
     public static String toHex(byte[] data) { return encode(data, 0, Preconditions.notNull(data, "data").length, LOWER); }
 
@@ -17,17 +19,17 @@ public final class Hex {
 
     public static String toUpperHex(byte[] data) { return encode(data, 0, Preconditions.notNull(data, "data").length, UPPER); }
 
-    private static String encode(byte[] data, int off, int len, char[] digits) {
+    private static String encode(byte[] data, int off, int len, byte[] digits) {
         Preconditions.notNull(data, "data");
         Preconditions.range(off, len, data.length);
         if (len > Integer.MAX_VALUE / 2) throw new CapacityExceededException("hex string", 2L * len, Integer.MAX_VALUE);
-        char[] out = new char[len * 2];
+        byte[] out = new byte[len * 2];
         for (int i = 0; i < len; i++) {
             int v = data[off + i] & 0xFF;
             out[i * 2] = digits[v >>> 4];
             out[i * 2 + 1] = digits[v & 0x0F];
         }
-        return new String(out);
+        return new String(out, StandardCharsets.ISO_8859_1);
     }
 
     /**
