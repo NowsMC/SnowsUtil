@@ -12,6 +12,7 @@ public final class FastTrig {
     private static final int TABLE_SIZE = 1 << TABLE_BITS;
     private static final int TABLE_MASK = TABLE_SIZE - 1;
     private static final float TO_INDEX = TABLE_SIZE / Angles.TWO_PI;
+    private static final double TO_INDEX_DOUBLE = TABLE_SIZE / (2.0 * Math.PI);
     private static final float INDEX_LIMIT = (float) (1 << 30);
     private static final float[] SIN_TABLE = new float[TABLE_SIZE];
 
@@ -21,15 +22,33 @@ public final class FastTrig {
         }
     }
 
-    private static int index(float radians) {
+    private static float scaled(float radians) {
         float t = radians * TO_INDEX;
         if (!(t > -INDEX_LIMIT && t < INDEX_LIMIT)) {   // false for NaN, +/-Infinity and huge values
             throw new IllegalArgumentException("radians out of supported range: " + radians);
         }
-        return Rounding.floor(t);
+        return t;
+    }
+
+    private static int index(float radians) { return Rounding.floor(scaled(radians)); }
+
+    private static float interpolate(float radians, int quarterTurns) {
+        scaled(radians);
+        double t = radians * TO_INDEX_DOUBLE;
+        int i = Rounding.floor(t);
+        float frac = (float) (t - i);
+        float a = SIN_TABLE[(i + quarterTurns) & TABLE_MASK];
+        float b = SIN_TABLE[(i + quarterTurns + 1) & TABLE_MASK];
+        return a + (b - a) * frac;
     }
 
     public static float sin(float radians) { return SIN_TABLE[index(radians) & TABLE_MASK]; }
 
     public static float cos(float radians) { return SIN_TABLE[(index(radians) + (TABLE_SIZE >> 2)) & TABLE_MASK]; }
+
+    /** Like {@link #sin} but linearly interpolates between table entries: absolute error about 3e-7, at a small extra cost. */
+    public static float sinSmooth(float radians) { return interpolate(radians, 0); }
+
+    /** Like {@link #cos} but linearly interpolates between table entries: absolute error about 3e-7, at a small extra cost. */
+    public static float cosSmooth(float radians) { return interpolate(radians, TABLE_SIZE >> 2); }
 }
