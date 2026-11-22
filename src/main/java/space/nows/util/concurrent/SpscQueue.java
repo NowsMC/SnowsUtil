@@ -16,6 +16,8 @@ public final class SpscQueue<E> {
     private final int mask;
     private final AtomicLong head = new AtomicLong();
     private final AtomicLong tail = new AtomicLong();
+    private long cachedHead;
+    private long cachedTail;
 
     public SpscQueue(int capacity) {
         if (capacity < 1 || capacity > (1 << 30)) {
@@ -33,7 +35,10 @@ public final class SpscQueue<E> {
     public boolean offer(E e) {
         Preconditions.notNull(e, "e");
         long t = tail.get();
-        if (t - head.get() == buffer.length) return false;
+        if (t - cachedHead == buffer.length) {
+            cachedHead = head.get();
+            if (t - cachedHead == buffer.length) return false;
+        }
         buffer[(int) (t & mask)] = e;
         tail.lazySet(t + 1);
         return true;
@@ -43,7 +48,10 @@ public final class SpscQueue<E> {
     @SuppressWarnings("unchecked")
     public E poll() {
         long h = head.get();
-        if (h == tail.get()) return null;
+        if (h == cachedTail) {
+            cachedTail = tail.get();
+            if (h == cachedTail) return null;
+        }
         int idx = (int) (h & mask);
         E e = (E) buffer[idx];
         buffer[idx] = null;
@@ -55,7 +63,10 @@ public final class SpscQueue<E> {
     @SuppressWarnings("unchecked")
     public E peek() {
         long h = head.get();
-        if (h == tail.get()) return null;
+        if (h == cachedTail) {
+            cachedTail = tail.get();
+            if (h == cachedTail) return null;
+        }
         return (E) buffer[(int) (h & mask)];
     }
 
@@ -78,7 +89,11 @@ public final class SpscQueue<E> {
     }
 
     /** Approximate when called from a thread other than the producer or consumer. */
-    public int size() { return (int) (tail.get() - head.get()); }
+    public int size() {
+        long h = head.get();
+        long t = tail.get();
+        return (int) Math.min(t - h, buffer.length);
+    }
 
     public int remainingCapacity() { return buffer.length - size(); }
 
