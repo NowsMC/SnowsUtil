@@ -157,6 +157,14 @@ public final class Json {
         writeEncoded(value, output, true);
     }
 
+    /**
+     * Canonical JSON (RFC 8785): sorted members, minimal escapes and ECMAScript number formatting. Two equal documents
+     * give the same bytes, which makes the output suitable for hashing and signing.
+     */
+    public static String canonical(Value value) {
+        return Canonical.write(Preconditions.notNull(value, "value"));
+    }
+
     /** Writes compact JSON using the given options. */
     public static String write(Value value, WriteOptions options) {
         return render(value, Preconditions.notNull(options, "options"));
