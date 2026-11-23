@@ -1,7 +1,8 @@
 package space.nows.util.json;
 
 import org.junit.jupiter.api.Test;
-import space.nows.util.error.JsonException;
+import space.nows.util.data.*;
+import space.nows.util.error.DataException;
 
 import java.io.ByteArrayInputStream;
 import java.io.StringReader;
@@ -13,7 +14,7 @@ import static org.junit.jupiter.api.Assertions.*;
 class JsonParserTest {
     @Test
     void parsesStringsNumbersAndNestedValues() {
-        JsonObject object = Json.parse("""
+        DataObject object = Json.parse("""
                 {"name":"สวัสดี","escaped":"line\\n\\uD83D\\uDE00","count":42,"large":123456789012345678901234567890}
                 """).asObject();
 
@@ -32,14 +33,14 @@ class JsonParserTest {
 
     @Test
     void readsUtf8FromBytesStreamsAndReaders() {
-        JsonObject object = new JsonObject().put("text", "สวัสดี");
+        DataObject object = new DataObject().put("text", "สวัสดี");
         String json = Json.write(object);
         byte[] bytes = json.getBytes(StandardCharsets.UTF_8);
 
         assertEquals(object, Json.parse(bytes));
         assertEquals(object, Json.parse(new ByteArrayInputStream(bytes)));
         assertEquals(object, Json.parse(new StringReader(json)));
-        assertThrows(JsonException.class, () -> Json.parse(new byte[]{'"', (byte) 0xC3, '"'}));
+        assertThrows(DataException.class, () -> Json.parse(new byte[]{'"', (byte) 0xC3, '"'}));
     }
 
     @Test
@@ -50,13 +51,13 @@ class JsonParserTest {
                 "\"\\u\uFF10\uFF10\uFF10\uFF10\"",
         };
         for (String input : malformed) {
-            assertThrows(JsonException.class, () -> Json.parse(input), input);
+            assertThrows(DataException.class, () -> Json.parse(input), input);
         }
     }
 
     @Test
     void enforcesNestingLimit() {
-        assertDoesNotThrow(() -> Json.parse("[".repeat(Json.MAX_DEPTH) + "0" + "]".repeat(Json.MAX_DEPTH)));
-        assertThrows(JsonException.class, () -> Json.parse("[".repeat(Json.MAX_DEPTH + 1) + "0" + "]".repeat(Json.MAX_DEPTH + 1)));
+        assertDoesNotThrow(() -> Json.parse("[".repeat(DataValue.MAX_DEPTH) + "0" + "]".repeat(DataValue.MAX_DEPTH)));
+        assertThrows(DataException.class, () -> Json.parse("[".repeat(DataValue.MAX_DEPTH + 1) + "0" + "]".repeat(DataValue.MAX_DEPTH + 1)));
     }
 }

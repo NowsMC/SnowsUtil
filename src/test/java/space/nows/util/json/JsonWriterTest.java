@@ -1,7 +1,8 @@
 package space.nows.util.json;
 
 import org.junit.jupiter.api.Test;
-import space.nows.util.error.JsonException;
+import space.nows.util.data.*;
+import space.nows.util.error.DataException;
 
 import java.io.ByteArrayOutputStream;
 import java.io.StringWriter;
@@ -10,10 +11,10 @@ import java.nio.charset.StandardCharsets;
 import static org.junit.jupiter.api.Assertions.*;
 
 class JsonWriterTest {
-    private static JsonObject sample() {
-        return new JsonObject()
+    private static DataObject sample() {
+        return new DataObject()
                 .put("quote", "\"\\\n\t")
-                .put("items", new JsonArray().add(1).addNull().add(true));
+                .put("items", new DataArray().add(1).addNull().add(true));
     }
 
     @Test
@@ -23,18 +24,18 @@ class JsonWriterTest {
 
     @Test
     void writesIndentedJsonThatRoundTrips() {
-        JsonObject object = sample();
+        DataObject object = sample();
         String pretty = Json.writePretty(object);
 
         assertTrue(pretty.contains("\n  \"quote\": "));
         assertEquals(object, Json.parse(pretty));
-        assertEquals("{}", Json.writePretty(new JsonObject()));
-        assertEquals("[]", Json.writePretty(new JsonArray()));
+        assertEquals("{}", Json.writePretty(new DataObject()));
+        assertEquals("[]", Json.writePretty(new DataArray()));
     }
 
     @Test
     void writesToAppendableAndStreams() throws Exception {
-        JsonObject object = sample();
+        DataObject object = sample();
 
         StringWriter writer = new StringWriter();
         Json.write(object, writer);
@@ -47,23 +48,23 @@ class JsonWriterTest {
 
     @Test
     void escapesControlCharactersAndUnpairedSurrogates() {
-        assertEquals("\"\\u0001\\u001f\"", Json.write(new JsonString("\u0001\u001F")));
-        assertEquals("\"\\ud83d\"", Json.write(new JsonString("\uD83D")));
-        assertEquals("\"😀\"", Json.write(new JsonString("😀")));
+        assertEquals("\"\\u0001\\u001f\"", Json.write(new DataString("\u0001\u001F")));
+        assertEquals("\"\\ud83d\"", Json.write(new DataString("\uD83D")));
+        assertEquals("\"😀\"", Json.write(new DataString("😀")));
     }
 
     @Test
     void enforcesNestingLimitWhenWriting() {
-        JsonValue atLimit = nested(Json.MAX_DEPTH);
+        DataValue atLimit = nested(DataValue.MAX_DEPTH);
         assertEquals(atLimit, Json.parse(Json.write(atLimit)));
 
-        JsonValue tooDeep = nested(Json.MAX_DEPTH + 1);
-        assertThrows(JsonException.class, () -> Json.write(tooDeep));
+        DataValue tooDeep = nested(DataValue.MAX_DEPTH + 1);
+        assertThrows(DataException.class, () -> Json.write(tooDeep));
     }
 
-    private static JsonValue nested(int levels) {
-        JsonValue value = JsonNull.INSTANCE;
-        for (int i = 0; i < levels; i++) value = new JsonArray().add(value);
+    private static DataValue nested(int levels) {
+        DataValue value = DataNull.INSTANCE;
+        for (int i = 0; i < levels; i++) value = new DataArray().add(value);
         return value;
     }
 }
