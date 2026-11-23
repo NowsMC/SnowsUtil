@@ -50,7 +50,10 @@ final class Decoder {
             Type element = arguments.length > 0 ? arguments[0] : Object.class;
             return value instanceof Null ? Optional.empty() : Optional.ofNullable(decode(value, element));
         }
-        if (value instanceof Null) return defaultValue(target);
+        if (value instanceof Null) {
+            if (target.isPrimitive()) throw new DataException("cannot bind null to " + target.getName());
+            return null;
+        }
         if (target == String.class || target == CharSequence.class) return value.asString();
         if (target == char.class || target == Character.class) return singleChar(value);
         if (target == boolean.class || target == Boolean.class) return value.asBoolean();
@@ -227,6 +230,7 @@ final class Decoder {
     }
 
     private static Object defaultValue(Class<?> type) {
+        if (type == Optional.class) return Optional.empty();
         if (!type.isPrimitive()) return null;
         if (type == boolean.class) return false;
         if (type == char.class) return '\0';
