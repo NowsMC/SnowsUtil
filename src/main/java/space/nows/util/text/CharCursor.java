@@ -19,6 +19,8 @@ public final class CharCursor {
     private final BufferedReader input;
     private int lookahead = NONE;
     private long offset;
+    private long line = 1;
+    private long column = 1;
 
     public CharCursor(Reader input) {
         this.input = input instanceof BufferedReader buffered
@@ -35,7 +37,15 @@ public final class CharCursor {
     public int read() throws IOException {
         int value = peek();
         lookahead = NONE;
-        if (value != EOF) offset++;
+        if (value != EOF) {
+            offset++;
+            if (value == '\n') {
+                line++;
+                column = 1;
+            } else {
+                column++;
+            }
+        }
         return value;
     }
 
@@ -44,7 +54,17 @@ public final class CharCursor {
         return offset;
     }
 
+    /** One-based line of the next character to be read. */
+    public long line() {
+        return line;
+    }
+
+    /** One-based column of the next character to be read. */
+    public long column() {
+        return column;
+    }
+
     public DataException error(String message) {
-        return new DataException(message + " (at char offset " + offset + ")");
+        return new DataException(message + " (at line " + line + ", column " + column + ", char offset " + offset + ")");
     }
 }
