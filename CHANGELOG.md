@@ -13,6 +13,7 @@
 - The parser keeps nesting on an explicit stack, so the depth limit cannot overflow the thread's stack.
 - Added `JsonPointer` (RFC 6901), `JsonPatch` (RFC 6902 patch and RFC 7386 merge patch), `JsonLines` for lazily read JSON Lines, and `JsonPath` with wildcards, recursive descent, unions, slices and filters.
 - `Mapper` gained a naming strategy (`Naming.SNAKE_CASE`, `KEBAB_CASE`, `UPPER_SNAKE_CASE`), `@Required`, `@Creator` constructors for immutable classes, `@TypeInfo` polymorphism, `Adapter` for custom types, and built-in adapters for `UUID`, `URI`, `Path`, `File`, `Currency`, `Locale`, `Charset` and the `java.time` value types.
+- Added `Json.canonical` for canonical JSON (RFC 8785): sorted members, minimal escapes and ECMAScript number formatting, so equal documents give identical bytes.
 - `Obj` and `Arr` are documented as not thread-safe.
 - `Mapper` rejects JSON `null` for primitive properties, duplicate property names (including fields shadowed by a subclass), and numbers that overflow `float` or `double`, instead of substituting a value.
 - `Mapper` reads map keys of numeric, boolean and enum types back from text, and writes enum keys by their property names.

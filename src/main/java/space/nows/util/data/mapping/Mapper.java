@@ -215,9 +215,10 @@ public final class Mapper {
         }
     }
 
-    /** The discriminator a subtype is written with, or {@code null} if {@code type} is not a listed subtype. */
+    /** Discriminator written for a listed subtype: the property name and the subtype's name. */
     record Tag(String property, String name) {}
 
+    /** The discriminator a subtype is written with, or {@code null} if {@code type} is not a listed subtype. */
     static Tag tagFor(Class<?> type) {
         for (Class<?> candidate : supertypes(type)) {
             TypeInfo info = candidate.getAnnotation(TypeInfo.class);
