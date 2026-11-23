@@ -10,7 +10,10 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 
-/** Mutable JSON object that keeps insertion order. */
+/**
+ * Mutable JSON object that keeps insertion order. Not thread-safe: guard a shared instance externally, or copy it
+ * before sharing across threads.
+ */
 public final class Obj implements Value, Iterable<Map.Entry<String, Value>> {
     private final OrderedObjectMap<String, Value> values;
 

@@ -7,7 +7,9 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 
-/** Mutable JSON array. */
+/**
+ * Mutable JSON array. Not thread-safe: guard a shared instance externally, or copy it before sharing across threads.
+ */
 public final class Arr implements Value, Iterable<Value> {
     private final ArrayList<Value> values;
 
@@ -39,6 +41,18 @@ public final class Arr implements Value, Iterable<Value> {
     public Arr addNull() { return add(Null.INSTANCE); }
 
     public Value get(int index) { return values.get(index); }
+
+    /** Inserts {@code value} before {@code index}; {@code index} may equal {@link #size()}. */
+    public Arr add(int index, Value value) {
+        values.add(index, Preconditions.notNull(value, "value"));
+        return this;
+    }
+
+    /** Replaces the element at {@code index} and returns the previous element. */
+    public Value set(int index, Value value) { return values.set(index, Preconditions.notNull(value, "value")); }
+
+    /** Removes the element at {@code index} and returns it. */
+    public Value remove(int index) { return values.remove(index); }
 
     public int size() { return values.size(); }
 
