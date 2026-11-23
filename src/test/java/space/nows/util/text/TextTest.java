@@ -31,6 +31,16 @@ class TextTest {
         }
     }
 
+    @Test void hexDigitValueAndLowerDigitAreAsciiOnly() {
+        assertEquals(10, Hex.digitValue('a'));
+        assertEquals(15, Hex.digitValue('F'));
+        assertEquals(-1, Hex.digitValue('g'));
+        assertEquals(-1, Hex.digitValue('１'));
+        assertEquals(-1, Hex.digitValue(-1));
+        assertEquals('f', Hex.lowerDigit(15));
+        assertEquals('0', Hex.lowerDigit(16));
+    }
+
     @Test void parserEdges() {
         assertEquals(Long.MAX_VALUE, NumberParser.parseLong("9223372036854775807", 0));
         assertEquals(Long.MIN_VALUE, NumberParser.parseLong("-9223372036854775808", 0));

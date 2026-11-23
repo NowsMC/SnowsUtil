@@ -63,15 +63,19 @@ public final class Hex {
 
     public static boolean isHex(CharSequence s) {
         if (s == null || (s.length() & 1) != 0) return false;
-        for (int i = 0, n = s.length(); i < n; i++) if (digitOf(s.charAt(i)) < 0) return false;
+        for (int i = 0, n = s.length(); i < n; i++) if (digitValue(s.charAt(i)) < 0) return false;
         return true;
     }
 
     private static int digit(String s, int index) {
-        int d = digitOf(s.charAt(index));
+        int d = digitValue(s.charAt(index));
         if (d < 0) throw new InvalidHexException("invalid hex character '" + s.charAt(index) + "'", index);
         return d;
     }
 
-    private static int digitOf(char c) { return c < DECODE.length ? DECODE[c] : -1; }
+    /** Value of an ASCII hex digit ({@code 0-9a-fA-F}), or {@code -1} for any other code unit. */
+    public static int digitValue(int c) { return c >= 0 && c < DECODE.length ? DECODE[c] : -1; }
+
+    /** Lower-case ASCII hex digit for the low four bits of {@code nibble}. */
+    public static char lowerDigit(int nibble) { return (char) LOWER[nibble & 0x0F]; }
 }
