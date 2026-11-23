@@ -8,6 +8,7 @@
 - Added `space.nows.util.json.Json` for strict JSON parsing and compact or pretty writing.
 - `Mapper` rejects JSON `null` for primitive properties, duplicate property names (including fields shadowed by a subclass), and numbers that overflow `float` or `double`, instead of substituting a value.
 - `Mapper` reads map keys of numeric, boolean and enum types back from text, and writes enum keys by their property names.
+- JSON `-0` and `-0.0` keep their sign when read as `double` or `float`, and are written back as `-0`. The parser skips a leading byte order mark.
 
 ### Text
 - Added `Utf8`: strict UTF-8 decoding that reports the offset of the invalid byte, and encoding without temporary arrays.
@@ -20,6 +21,9 @@
 
 ### Errors
 - Added `DataException` and `InvalidUtf8Exception`.
+
+### Changed
+- `Rounding.floor`, `ceil` and `round` throw `IllegalArgumentException` for NaN instead of returning 0. Code that relied on the 0 must check for NaN first.
 
 ### Fixed
 - `ObjectPool` keeps at most `maxIdle` released objects. `maxIdle()` returns the configured value rather than the queue's rounded capacity, and a pool with `maxIdle` of 0 keeps nothing.
