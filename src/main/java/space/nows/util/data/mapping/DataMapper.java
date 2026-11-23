@@ -1,18 +1,15 @@
-package space.nows.util.json.mapping;
+package space.nows.util.data.mapping;
 
 import space.nows.util.check.Preconditions;
-import space.nows.util.error.JsonException;
-import space.nows.util.json.Json;
-import space.nows.util.json.JsonArray;
-import space.nows.util.json.JsonBoolean;
-import space.nows.util.json.JsonNull;
-import space.nows.util.json.JsonNumber;
-import space.nows.util.json.JsonObject;
-import space.nows.util.json.JsonString;
-import space.nows.util.json.JsonValue;
+import space.nows.util.data.DataArray;
+import space.nows.util.data.DataBoolean;
+import space.nows.util.data.DataNull;
+import space.nows.util.data.DataNumber;
+import space.nows.util.data.DataObject;
+import space.nows.util.data.DataString;
+import space.nows.util.data.DataValue;
+import space.nows.util.error.DataException;
 
-import java.io.InputStream;
-import java.io.Reader;
 import java.lang.reflect.Array;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -27,123 +24,106 @@ import java.util.Map;
 import java.util.Optional;
 
 /**
- * Converts between Java objects and {@link JsonValue} trees by reflection. Supports records, classes with a
+ * Converts between Java objects and {@link DataValue} trees by reflection. Supports records, classes with a
  * no-argument constructor (including inherited fields), enums, arrays, collections, maps and {@link Optional}.
+ * The mapper is independent of any text format; pair it with a format's parser and writer.
  */
-public final class JsonMapper {
-    private final JsonDecoder decoder;
+public final class DataMapper {
+    private final DataDecoder decoder;
 
-    /** Rejects JSON properties that have no matching Java property. */
-    public JsonMapper() {
+    /** Rejects properties that have no matching Java property. */
+    public DataMapper() {
         this(true);
     }
 
-    private JsonMapper(boolean failOnUnknown) {
-        decoder = new JsonDecoder(failOnUnknown);
+    private DataMapper(boolean failOnUnknown) {
+        decoder = new DataDecoder(failOnUnknown);
     }
 
-    /** Ignores JSON properties that have no matching Java property. */
-    public static JsonMapper lenient() {
-        return new JsonMapper(false);
+    /** Ignores properties that have no matching Java property. */
+    public static DataMapper lenient() {
+        return new DataMapper(false);
     }
 
-    public JsonValue toJsonValue(Object value) {
+    public DataValue toData(Object value) {
         return toValue(value, 0);
     }
 
-    public String toJson(Object value) {
-        return Json.write(toJsonValue(value));
-    }
-
-    public String toJsonPretty(Object value) {
-        return Json.writePretty(toJsonValue(value));
-    }
-
-    public <T> T fromJson(String input, Class<T> type) {
-        return fromJson(Json.parse(input), type);
-    }
-
-    public <T> T fromJson(Reader input, Class<T> type) {
-        return fromJson(Json.parse(input), type);
-    }
-
-    public <T> T fromJson(InputStream input, Class<T> type) {
-        return fromJson(Json.parse(input), type);
-    }
-
-    public <T> T fromJson(JsonValue value, Class<T> type) {
-        return fromJson(value, (Type) type);
+    public <T> T fromData(DataValue value, Class<T> type) {
+        return fromData(value, (Type) type);
     }
 
     /** Binds to a generic type such as {@code List<Person>} that cannot be expressed as a {@link Class} literal. */
     @SuppressWarnings("unchecked")
-    public <T> T fromJson(JsonValue value, Type type) {
+    public <T> T fromData(DataValue value, Type type) {
         Preconditions.notNull(value, "value");
         Preconditions.notNull(type, "type");
         try {
             return (T) decoder.decode(value, type);
         } catch (ReflectiveOperationException e) {
-            throw new JsonException("data binding failed: " + e, e);
+            throw new DataException("data binding failed: " + e, e);
         }
     }
 
-    private JsonValue toValue(Object value, int depth) {
-        if (depth > Json.MAX_DEPTH) throw new JsonException("maximum nesting depth " + Json.MAX_DEPTH + " exceeded");
-        if (value == null) return JsonNull.INSTANCE;
-        if (value instanceof JsonValue json) return json;
-        if (value instanceof String string) return new JsonString(string);
-        if (value instanceof Character character) return new JsonString(character.toString());
-        if (value instanceof Boolean bool) return JsonBoolean.of(bool);
-        if (value instanceof BigDecimal decimal) return JsonNumber.of(decimal);
-        if (value instanceof BigInteger integer) return JsonNumber.of(integer);
-        if (value instanceof Number number) return JsonNumber.of(decimalOf(number));
-        if (value instanceof Enum<?> constant) return new JsonString(enumName(constant));
+    private DataValue toValue(Object value, int depth) {
+        if (depth > DataValue.MAX_DEPTH) {
+            throw new DataException("maximum nesting depth " + DataValue.MAX_DEPTH + " exceeded");
+        }
+        if (value == null) return DataNull.INSTANCE;
+        if (value instanceof DataValue data) return data;
+        if (value instanceof String string) return new DataString(string);
+        if (value instanceof Character character) return new DataString(character.toString());
+        if (value instanceof Boolean bool) return DataBoolean.of(bool);
+        if (value instanceof BigDecimal decimal) return DataNumber.of(decimal);
+        if (value instanceof BigInteger integer) return DataNumber.of(integer);
+        if (value instanceof Number number) return DataNumber.of(decimalOf(number));
+        if (value instanceof Enum<?> constant) return new DataString(enumName(constant));
         if (value instanceof Optional<?> optional) {
-            return optional.isPresent() ? toValue(optional.get(), depth + 1) : JsonNull.INSTANCE;
+            return optional.isPresent() ? toValue(optional.get(), depth + 1) : DataNull.INSTANCE;
         }
         if (value instanceof Map<?, ?> map) {
-            JsonObject object = new JsonObject(map.size());
+            DataObject object = new DataObject(map.size());
             for (Map.Entry<?, ?> entry : map.entrySet()) {
                 object.put(String.valueOf(entry.getKey()), toValue(entry.getValue(), depth + 1));
             }
             return object;
         }
         if (value instanceof Iterable<?> iterable) {
-            JsonArray array = new JsonArray();
+            DataArray array = new DataArray();
             for (Object element : iterable) array.add(toValue(element, depth + 1));
             return array;
         }
         if (value.getClass().isArray()) {
             int length = Array.getLength(value);
-            JsonArray array = new JsonArray(length);
+            DataArray array = new DataArray(length);
             for (int i = 0; i < length; i++) array.add(toValue(Array.get(value, i), depth + 1));
             return array;
         }
         return bean(value, depth);
     }
 
-    private JsonObject bean(Object value, int depth) {
+    private DataObject bean(Object value, int depth) {
         Class<?> type = value.getClass();
-        JsonInclude include = type.getAnnotation(JsonInclude.class);
-        boolean includeNulls = include == null || include.value() == JsonInclude.Include.ALWAYS;
-        JsonObject object = new JsonObject();
+        DataInclude include = type.getAnnotation(DataInclude.class);
+        boolean includeNulls = include == null || include.value() == DataInclude.Include.ALWAYS;
+        DataObject object = new DataObject();
         if (type.isRecord()) {
             for (RecordComponent component : type.getRecordComponents()) {
-                if (component.isAnnotationPresent(JsonIgnore.class)) continue;
-                String name = propertyName(component.getName(), component.getAnnotation(JsonProperty.class));
+                if (component.isAnnotationPresent(DataIgnore.class)) continue;
+                String name = propertyName(component.getName(), component.getAnnotation(DataProperty.class));
                 putProperty(object, name, invoke(component.getAccessor(), value, name), includeNulls, depth);
             }
         } else {
             for (Field field : instanceFields(type)) {
-                if (field.isAnnotationPresent(JsonIgnore.class)) continue;
-                String name = propertyName(field.getName(), field.getAnnotation(JsonProperty.class));
+                if (field.isAnnotationPresent(DataIgnore.class)) continue;
+                String name = propertyName(field.getName(), field.getAnnotation(DataProperty.class));
                 putProperty(object, name, read(field, value, name), includeNulls, depth);
             }
         }
         return object;
     }
 
-    private void putProperty(JsonObject object, String name, Object fieldValue, boolean includeNulls, int depth) {
+    private void putProperty(DataObject object, String name, Object fieldValue, boolean includeNulls, int depth) {
         if (fieldValue != null || includeNulls) object.put(name, toValue(fieldValue, depth + 1));
     }
 
@@ -152,7 +132,7 @@ public final class JsonMapper {
         try {
             return accessor.invoke(target);
         } catch (ReflectiveOperationException e) {
-            throw new JsonException("cannot read property \"" + name + "\"", e);
+            throw new DataException("cannot read property \"" + name + "\"", e);
         }
     }
 
@@ -161,12 +141,12 @@ public final class JsonMapper {
         try {
             return field.get(target);
         } catch (IllegalAccessException e) {
-            throw new JsonException("cannot read property \"" + name + "\"", e);
+            throw new DataException("cannot read property \"" + name + "\"", e);
         }
     }
 
-    static JsonException inaccessible(String name) {
-        return new JsonException("cannot access property \"" + name + "\"");
+    static DataException inaccessible(String name) {
+        return new DataException("cannot access property \"" + name + "\"");
     }
 
     /** Instance fields of {@code type} and its superclasses, excluding static, transient and synthetic fields. */
@@ -187,13 +167,13 @@ public final class JsonMapper {
         return fields;
     }
 
-    static String propertyName(String fallback, JsonProperty property) {
+    static String propertyName(String fallback, DataProperty property) {
         return property == null || property.value().isEmpty() ? fallback : property.value();
     }
 
     static String enumName(Enum<?> constant) {
         try {
-            JsonProperty property = constant.getDeclaringClass().getField(constant.name()).getAnnotation(JsonProperty.class);
+            DataProperty property = constant.getDeclaringClass().getField(constant.name()).getAnnotation(DataProperty.class);
             return property == null || property.value().isEmpty() ? constant.name() : property.value();
         } catch (NoSuchFieldException e) {
             return constant.name();
@@ -204,7 +184,7 @@ public final class JsonMapper {
         try {
             return new BigDecimal(number.toString());
         } catch (NumberFormatException e) {
-            throw new JsonException("unsupported numeric value: " + number, e);
+            throw new DataException("unsupported numeric value: " + number, e);
         }
     }
 }

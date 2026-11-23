@@ -1,13 +1,13 @@
-package space.nows.util.json.mapping;
+package space.nows.util.data.mapping;
 
-import space.nows.util.error.JsonException;
-import space.nows.util.json.JsonArray;
-import space.nows.util.json.JsonBoolean;
-import space.nows.util.json.JsonNull;
-import space.nows.util.json.JsonNumber;
-import space.nows.util.json.JsonObject;
-import space.nows.util.json.JsonString;
-import space.nows.util.json.JsonValue;
+import space.nows.util.error.DataException;
+import space.nows.util.data.DataArray;
+import space.nows.util.data.DataBoolean;
+import space.nows.util.data.DataNull;
+import space.nows.util.data.DataNumber;
+import space.nows.util.data.DataObject;
+import space.nows.util.data.DataString;
+import space.nows.util.data.DataValue;
 
 import java.lang.reflect.Array;
 import java.lang.reflect.Constructor;
@@ -30,27 +30,27 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
-final class JsonDecoder {
+final class DataDecoder {
     private final boolean failOnUnknown;
 
-    JsonDecoder(boolean failOnUnknown) {
+    DataDecoder(boolean failOnUnknown) {
         this.failOnUnknown = failOnUnknown;
     }
 
-    Object decode(JsonValue value, Type type) throws ReflectiveOperationException {
+    Object decode(DataValue value, Type type) throws ReflectiveOperationException {
         Class<?> target = rawType(type);
         Type[] arguments = type instanceof ParameterizedType parameterized
                 ? parameterized.getActualTypeArguments() : new Type[0];
         if (target == Object.class) return toJavaValue(value);
-        if (JsonValue.class.isAssignableFrom(target)) {
+        if (DataValue.class.isAssignableFrom(target)) {
             if (target.isInstance(value)) return value;
             throw mismatch(target, value);
         }
         if (target == Optional.class) {
             Type element = arguments.length > 0 ? arguments[0] : Object.class;
-            return value instanceof JsonNull ? Optional.empty() : Optional.ofNullable(decode(value, element));
+            return value instanceof DataNull ? Optional.empty() : Optional.ofNullable(decode(value, element));
         }
-        if (value instanceof JsonNull) return defaultValue(target);
+        if (value instanceof DataNull) return defaultValue(target);
         if (target == String.class || target == CharSequence.class) return value.asString();
         if (target == char.class || target == Character.class) return singleChar(value);
         if (target == boolean.class || target == Boolean.class) return value.asBoolean();
@@ -75,111 +75,111 @@ final class JsonDecoder {
         return target.isRecord() ? record(value.asObject(), target) : instance(value.asObject(), target);
     }
 
-    private Object array(JsonArray array, Type type, Class<?> target) throws ReflectiveOperationException {
+    private Object array(DataArray array, Type type, Class<?> target) throws ReflectiveOperationException {
         Type component = type instanceof GenericArrayType generic ? generic.getGenericComponentType() : target.getComponentType();
         Object result = Array.newInstance(rawType(component), array.size());
         for (int i = 0; i < array.size(); i++) Array.set(result, i, decode(array.get(i), component));
         return result;
     }
 
-    private Collection<Object> collection(JsonArray array, Class<?> target, Type element) throws ReflectiveOperationException {
+    private Collection<Object> collection(DataArray array, Class<?> target, Type element) throws ReflectiveOperationException {
         Collection<Object> result = Set.class.isAssignableFrom(target)
                 ? new LinkedHashSet<Object>() : new ArrayList<Object>(array.size());
-        if (!target.isInstance(result)) throw new JsonException("unsupported collection type: " + target.getTypeName());
-        for (JsonValue item : array) result.add(decode(item, element));
+        if (!target.isInstance(result)) throw new DataException("unsupported collection type: " + target.getTypeName());
+        for (DataValue item : array) result.add(decode(item, element));
         return result;
     }
 
-    private Map<Object, Object> map(JsonObject object, Class<?> target, Type keyType, Type valueType)
+    private Map<Object, Object> map(DataObject object, Class<?> target, Type keyType, Type valueType)
             throws ReflectiveOperationException {
         if (!target.isAssignableFrom(LinkedHashMap.class)) {
-            throw new JsonException("unsupported map type: " + target.getTypeName());
+            throw new DataException("unsupported map type: " + target.getTypeName());
         }
         Map<Object, Object> result = new LinkedHashMap<>();
-        for (Map.Entry<String, JsonValue> entry : object) {
-            result.put(decode(new JsonString(entry.getKey()), keyType), decode(entry.getValue(), valueType));
+        for (Map.Entry<String, DataValue> entry : object) {
+            result.put(decode(new DataString(entry.getKey()), keyType), decode(entry.getValue(), valueType));
         }
         return result;
     }
 
-    private Object record(JsonObject object, Class<?> target) throws ReflectiveOperationException {
+    private Object record(DataObject object, Class<?> target) throws ReflectiveOperationException {
         RecordComponent[] components = target.getRecordComponents();
         Class<?>[] parameterTypes = new Class<?>[components.length];
         Object[] arguments = new Object[components.length];
         Set<String> known = new HashSet<>();
         for (int i = 0; i < components.length; i++) {
             RecordComponent component = components[i];
-            String name = JsonMapper.propertyName(component.getName(), component.getAnnotation(JsonProperty.class));
+            String name = DataMapper.propertyName(component.getName(), component.getAnnotation(DataProperty.class));
             parameterTypes[i] = component.getType();
             known.add(name);
-            JsonValue property = component.isAnnotationPresent(JsonIgnore.class) ? null : object.get(name);
+            DataValue property = component.isAnnotationPresent(DataIgnore.class) ? null : object.get(name);
             arguments[i] = property == null ? defaultValue(component.getType()) : decode(property, component.getGenericType());
         }
         checkUnknown(object, known);
         Constructor<?> constructor = target.getDeclaredConstructor(parameterTypes);
-        if (!constructor.trySetAccessible()) throw new JsonException("cannot access record constructor: " + target.getName());
+        if (!constructor.trySetAccessible()) throw new DataException("cannot access record constructor: " + target.getName());
         return constructor.newInstance(arguments);
     }
 
-    private Object instance(JsonObject object, Class<?> target) throws ReflectiveOperationException {
+    private Object instance(DataObject object, Class<?> target) throws ReflectiveOperationException {
         Constructor<?> constructor = target.getDeclaredConstructor();
-        if (!constructor.trySetAccessible()) throw new JsonException("cannot access constructor: " + target.getName());
+        if (!constructor.trySetAccessible()) throw new DataException("cannot access constructor: " + target.getName());
         Object instance = constructor.newInstance();
         Set<String> known = new HashSet<>();
-        for (Field field : JsonMapper.instanceFields(target)) {
-            String name = JsonMapper.propertyName(field.getName(), field.getAnnotation(JsonProperty.class));
+        for (Field field : DataMapper.instanceFields(target)) {
+            String name = DataMapper.propertyName(field.getName(), field.getAnnotation(DataProperty.class));
             known.add(name);
-            JsonValue property = field.isAnnotationPresent(JsonIgnore.class) ? null : object.get(name);
+            DataValue property = field.isAnnotationPresent(DataIgnore.class) ? null : object.get(name);
             if (property == null) continue;
-            if (!field.trySetAccessible()) throw JsonMapper.inaccessible(name);
+            if (!field.trySetAccessible()) throw DataMapper.inaccessible(name);
             field.set(instance, decode(property, field.getGenericType()));
         }
         checkUnknown(object, known);
         return instance;
     }
 
-    private void checkUnknown(JsonObject object, Set<String> known) {
+    private void checkUnknown(DataObject object, Set<String> known) {
         if (!failOnUnknown) return;
         for (String name : object.keys()) {
-            if (!known.contains(name)) throw new JsonException("unknown property: \"" + name + "\"");
+            if (!known.contains(name)) throw new DataException("unknown property: \"" + name + "\"");
         }
     }
 
     private static Object enumConstant(String name, Class<?> target) {
         Object[] constants = target.getEnumConstants();
         for (Object constant : constants) {
-            if (JsonMapper.enumName((Enum<?>) constant).equals(name)) return constant;
+            if (DataMapper.enumName((Enum<?>) constant).equals(name)) return constant;
         }
         for (Object constant : constants) {
             if (((Enum<?>) constant).name().equals(name)) return constant;
         }
-        throw new JsonException("unknown " + target.getSimpleName() + " constant: \"" + name + "\"");
+        throw new DataException("unknown " + target.getSimpleName() + " constant: \"" + name + "\"");
     }
 
-    private static char singleChar(JsonValue value) {
+    private static char singleChar(DataValue value) {
         String text = value.asString();
-        if (text.length() != 1) throw new JsonException("expected a single character but got " + text.length() + " characters");
+        if (text.length() != 1) throw new DataException("expected a single character but got " + text.length() + " characters");
         return text.charAt(0);
     }
 
-    static Object toJavaValue(JsonValue value) {
-        if (value instanceof JsonNull) return null;
-        if (value instanceof JsonBoolean bool) return bool.value();
-        if (value instanceof JsonString string) return string.value();
-        if (value instanceof JsonNumber number) return javaNumber(number);
-        if (value instanceof JsonArray array) {
+    static Object toJavaValue(DataValue value) {
+        if (value instanceof DataNull) return null;
+        if (value instanceof DataBoolean bool) return bool.value();
+        if (value instanceof DataString string) return string.value();
+        if (value instanceof DataNumber number) return javaNumber(number);
+        if (value instanceof DataArray array) {
             List<Object> result = new ArrayList<>(array.size());
-            for (JsonValue element : array) result.add(toJavaValue(element));
+            for (DataValue element : array) result.add(toJavaValue(element));
             return result;
         }
         Map<String, Object> result = new LinkedHashMap<>();
-        for (Map.Entry<String, JsonValue> entry : value.asObject()) {
+        for (Map.Entry<String, DataValue> entry : value.asObject()) {
             result.put(entry.getKey(), toJavaValue(entry.getValue()));
         }
         return result;
     }
 
-    private static Object javaNumber(JsonNumber number) {
+    private static Object javaNumber(DataNumber number) {
         BigDecimal decimal = number.asDecimal();
         try {
             return decimal.intValueExact();
@@ -200,7 +200,7 @@ final class JsonDecoder {
         }
         if (type instanceof WildcardType wildcard) return rawType(wildcard.getUpperBounds()[0]);
         if (type instanceof TypeVariable<?>) return Object.class;
-        throw new JsonException("unsupported target type: " + type.getTypeName());
+        throw new DataException("unsupported target type: " + type.getTypeName());
     }
 
     private static Object defaultValue(Class<?> type) {
@@ -216,7 +216,7 @@ final class JsonDecoder {
         return null;
     }
 
-    private static JsonException mismatch(Class<?> target, JsonValue value) {
-        return new JsonException("cannot bind " + value.type().label() + " to " + target.getSimpleName());
+    private static DataException mismatch(Class<?> target, DataValue value) {
+        return new DataException("cannot bind " + value.type().label() + " to " + target.getSimpleName());
     }
 }
