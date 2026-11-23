@@ -2,8 +2,10 @@ package space.nows.util.json;
 
 import space.nows.util.check.Preconditions;
 import space.nows.util.data.DataValue;
+import space.nows.util.error.DataException;
+import space.nows.util.error.InvalidUtf8Exception;
+import space.nows.util.text.Utf8;
 
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -25,7 +27,12 @@ public final class Json {
     }
 
     public static DataValue parse(byte[] input) {
-        return parse(new ByteArrayInputStream(Preconditions.notNull(input, "input")));
+        Preconditions.notNull(input, "input");
+        try {
+            return parse(Utf8.decode(input, 0, input.length));
+        } catch (InvalidUtf8Exception e) {
+            throw new DataException("malformed UTF-8: " + e.getMessage(), e);
+        }
     }
 
     /** Reads until end of stream. The stream is not closed. */

@@ -3,6 +3,7 @@ package space.nows.util.io;
 import space.nows.util.error.CapacityExceededException;
 import space.nows.util.check.Preconditions;
 import space.nows.util.error.InsufficientDataException;
+import space.nows.util.text.Utf8;
 
 import java.io.EOFException;
 import java.io.IOException;
@@ -124,9 +125,11 @@ public final class ByteBuf {
 
     /** Encodes {@code s} as UTF-8 and appends it (no length prefix). Returns the number of bytes written. */
     public int writeUtf8(CharSequence s) {
-        byte[] bytes = Preconditions.notNull(s, "s").toString().getBytes(StandardCharsets.UTF_8);
-        writeBytes(bytes);
-        return bytes.length;
+        int n = Utf8.encodedLength(s);
+        ensureWritable(n);
+        Utf8.encode(s, data, writePos);
+        writePos += n;
+        return n;
     }
 
     /** Appends exactly {@code len} bytes from {@code in}. Throws {@link EOFException} if the stream ends early; nothing is appended then. */
@@ -283,9 +286,12 @@ public final class ByteBuf {
 
     /** Writes a varint byte length followed by the UTF-8 bytes of {@code s}. */
     public ByteBuf writeString(CharSequence s) {
-        byte[] bytes = Preconditions.notNull(s, "s").toString().getBytes(StandardCharsets.UTF_8);
-        writeVarInt(bytes.length);
-        return writeBytes(bytes);
+        int n = Utf8.encodedLength(s);
+        writeVarInt(n);
+        ensureWritable(n);
+        Utf8.encode(s, data, writePos);
+        writePos += n;
+        return this;
     }
 
     /**
