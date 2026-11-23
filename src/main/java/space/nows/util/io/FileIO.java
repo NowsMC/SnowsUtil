@@ -6,9 +6,11 @@ import space.nows.util.error.CapacityExceededException;
 import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InterruptedIOException;
 import java.nio.ByteBuffer;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
+import java.nio.file.AccessDeniedException;
 import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -70,13 +72,38 @@ public final class FileIO {
         Path tmp = Files.createTempFile(target.getParent(), target.getFileName().toString(), ".tmp");
         try {
             Files.write(tmp, data);
-            try {
-                Files.move(tmp, target, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
-            } catch (AtomicMoveNotSupportedException e) {
-                Files.move(tmp, target, StandardCopyOption.REPLACE_EXISTING);
-            }
+            replace(tmp, target);
         } finally {
             Files.deleteIfExists(tmp);
+        }
+    }
+
+    private static final int REPLACE_ATTEMPTS = 200;
+
+    /**
+     * Moves {@code from} over {@code to}. On Windows the move fails while another process has {@code to} open, and
+     * readers are expected during an atomic write, so the move is retried briefly before the failure is reported.
+     */
+    private static void replace(Path from, Path to) throws IOException {
+        for (int attempt = 1; ; attempt++) {
+            try {
+                try {
+                    Files.move(from, to, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
+                } catch (AtomicMoveNotSupportedException e) {
+                    Files.move(from, to, StandardCopyOption.REPLACE_EXISTING);
+                }
+                return;
+            } catch (AccessDeniedException e) {
+                if (attempt >= REPLACE_ATTEMPTS) throw e;
+                try {
+                    Thread.sleep(2);
+                } catch (InterruptedException interrupted) {
+                    Thread.currentThread().interrupt();
+                    InterruptedIOException failure = new InterruptedIOException("interrupted while replacing " + to);
+                    failure.initCause(interrupted);
+                    throw failure;
+                }
+            }
         }
     }
 }
