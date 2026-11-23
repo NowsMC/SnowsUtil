@@ -3,20 +3,20 @@ package space.nows.util.data;
 import java.util.Map;
 
 /** Compact debug rendering used by {@code toString()}. It is not a serialization format; use a format's writer for output. */
-final class DataText {
-    private DataText() {}
+final class Debug {
+    private Debug() {}
 
-    static String of(DataValue value) {
+    static String of(Value value) {
         StringBuilder out = new StringBuilder();
         append(value, out);
         return out.toString();
     }
 
-    private static void append(DataValue value, StringBuilder out) {
-        if (value instanceof DataObject object) {
+    private static void append(Value value, StringBuilder out) {
+        if (value instanceof Obj object) {
             out.append('{');
             boolean first = true;
-            for (Map.Entry<String, DataValue> entry : object) {
+            for (Map.Entry<String, Value> entry : object) {
                 if (!first) out.append(',');
                 first = false;
                 quote(entry.getKey(), out);
@@ -24,16 +24,16 @@ final class DataText {
                 append(entry.getValue(), out);
             }
             out.append('}');
-        } else if (value instanceof DataArray array) {
+        } else if (value instanceof Arr array) {
             out.append('[');
             boolean first = true;
-            for (DataValue element : array) {
+            for (Value element : array) {
                 if (!first) out.append(',');
                 first = false;
                 append(element, out);
             }
             out.append(']');
-        } else if (value instanceof DataString string) {
+        } else if (value instanceof Str string) {
             quote(string.value(), out);
         } else {
             out.append(value);

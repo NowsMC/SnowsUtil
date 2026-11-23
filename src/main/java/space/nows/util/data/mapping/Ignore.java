@@ -5,9 +5,7 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
-/** Overrides the JSON property name of a field, record component or enum constant. */
+/** Excludes a field or record component from both serialization and deserialization. */
 @Retention(RetentionPolicy.RUNTIME)
 @Target({ElementType.FIELD, ElementType.RECORD_COMPONENT})
-public @interface DataProperty {
-    String value() default "";
-}
+public @interface Ignore {}

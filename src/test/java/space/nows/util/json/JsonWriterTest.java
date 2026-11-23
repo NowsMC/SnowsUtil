@@ -11,10 +11,10 @@ import java.nio.charset.StandardCharsets;
 import static org.junit.jupiter.api.Assertions.*;
 
 class JsonWriterTest {
-    private static DataObject sample() {
-        return new DataObject()
+    private static Obj sample() {
+        return new Obj()
                 .put("quote", "\"\\\n\t")
-                .put("items", new DataArray().add(1).addNull().add(true));
+                .put("items", new Arr().add(1).addNull().add(true));
     }
 
     @Test
@@ -24,18 +24,18 @@ class JsonWriterTest {
 
     @Test
     void writesIndentedJsonThatRoundTrips() {
-        DataObject object = sample();
+        Obj object = sample();
         String pretty = Json.writePretty(object);
 
         assertTrue(pretty.contains("\n  \"quote\": "));
         assertEquals(object, Json.parse(pretty));
-        assertEquals("{}", Json.writePretty(new DataObject()));
-        assertEquals("[]", Json.writePretty(new DataArray()));
+        assertEquals("{}", Json.writePretty(new Obj()));
+        assertEquals("[]", Json.writePretty(new Arr()));
     }
 
     @Test
     void writesToAppendableAndStreams() throws Exception {
-        DataObject object = sample();
+        Obj object = sample();
 
         StringWriter writer = new StringWriter();
         Json.write(object, writer);
@@ -48,23 +48,23 @@ class JsonWriterTest {
 
     @Test
     void escapesControlCharactersAndUnpairedSurrogates() {
-        assertEquals("\"\\u0001\\u001f\"", Json.write(new DataString("\u0001\u001F")));
-        assertEquals("\"\\ud83d\"", Json.write(new DataString("\uD83D")));
-        assertEquals("\"😀\"", Json.write(new DataString("😀")));
+        assertEquals("\"\\u0001\\u001f\"", Json.write(new Str("\u0001\u001F")));
+        assertEquals("\"\\ud83d\"", Json.write(new Str("\uD83D")));
+        assertEquals("\"😀\"", Json.write(new Str("😀")));
     }
 
     @Test
     void enforcesNestingLimitWhenWriting() {
-        DataValue atLimit = nested(DataValue.MAX_DEPTH);
+        Value atLimit = nested(Value.MAX_DEPTH);
         assertEquals(atLimit, Json.parse(Json.write(atLimit)));
 
-        DataValue tooDeep = nested(DataValue.MAX_DEPTH + 1);
+        Value tooDeep = nested(Value.MAX_DEPTH + 1);
         assertThrows(DataException.class, () -> Json.write(tooDeep));
     }
 
-    private static DataValue nested(int levels) {
-        DataValue value = DataNull.INSTANCE;
-        for (int i = 0; i < levels; i++) value = new DataArray().add(value);
+    private static Value nested(int levels) {
+        Value value = Null.INSTANCE;
+        for (int i = 0; i < levels; i++) value = new Arr().add(value);
         return value;
     }
 }

@@ -8,8 +8,8 @@ import java.lang.annotation.Target;
 /** Controls whether {@code null} properties of a type are written. */
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.TYPE)
-public @interface DataInclude {
-    Include value();
+public @interface Include {
+    Policy value();
 
-    enum Include { ALWAYS, NON_NULL }
+    enum Policy { ALWAYS, NON_NULL }
 }

@@ -1,13 +1,13 @@
 package space.nows.util.data.mapping;
 
 import space.nows.util.check.Preconditions;
-import space.nows.util.data.DataArray;
-import space.nows.util.data.DataBoolean;
-import space.nows.util.data.DataNull;
-import space.nows.util.data.DataNumber;
-import space.nows.util.data.DataObject;
-import space.nows.util.data.DataString;
-import space.nows.util.data.DataValue;
+import space.nows.util.data.Arr;
+import space.nows.util.data.Bool;
+import space.nows.util.data.Null;
+import space.nows.util.data.Num;
+import space.nows.util.data.Obj;
+import space.nows.util.data.Str;
+import space.nows.util.data.Value;
 import space.nows.util.error.DataException;
 
 import java.lang.reflect.Array;
@@ -24,38 +24,38 @@ import java.util.Map;
 import java.util.Optional;
 
 /**
- * Converts between Java objects and {@link DataValue} trees by reflection. Supports records, classes with a
+ * Converts between Java objects and {@link Value} trees by reflection. Supports records, classes with a
  * no-argument constructor (including inherited fields), enums, arrays, collections, maps and {@link Optional}.
  * The mapper is independent of any text format; pair it with a format's parser and writer.
  */
-public final class DataMapper {
-    private final DataDecoder decoder;
+public final class Mapper {
+    private final Decoder decoder;
 
     /** Rejects properties that have no matching Java property. */
-    public DataMapper() {
+    public Mapper() {
         this(true);
     }
 
-    private DataMapper(boolean failOnUnknown) {
-        decoder = new DataDecoder(failOnUnknown);
+    private Mapper(boolean failOnUnknown) {
+        decoder = new Decoder(failOnUnknown);
     }
 
     /** Ignores properties that have no matching Java property. */
-    public static DataMapper lenient() {
-        return new DataMapper(false);
+    public static Mapper lenient() {
+        return new Mapper(false);
     }
 
-    public DataValue toData(Object value) {
+    public Value toData(Object value) {
         return toValue(value, 0);
     }
 
-    public <T> T fromData(DataValue value, Class<T> type) {
+    public <T> T fromData(Value value, Class<T> type) {
         return fromData(value, (Type) type);
     }
 
     /** Binds to a generic type such as {@code List<Person>} that cannot be expressed as a {@link Class} literal. */
     @SuppressWarnings("unchecked")
-    public <T> T fromData(DataValue value, Type type) {
+    public <T> T fromData(Value value, Type type) {
         Preconditions.notNull(value, "value");
         Preconditions.notNull(type, "type");
         try {
@@ -65,65 +65,65 @@ public final class DataMapper {
         }
     }
 
-    private DataValue toValue(Object value, int depth) {
-        if (depth > DataValue.MAX_DEPTH) {
-            throw new DataException("maximum nesting depth " + DataValue.MAX_DEPTH + " exceeded");
+    private Value toValue(Object value, int depth) {
+        if (depth > Value.MAX_DEPTH) {
+            throw new DataException("maximum nesting depth " + Value.MAX_DEPTH + " exceeded");
         }
-        if (value == null) return DataNull.INSTANCE;
-        if (value instanceof DataValue data) return data;
-        if (value instanceof String string) return new DataString(string);
-        if (value instanceof Character character) return new DataString(character.toString());
-        if (value instanceof Boolean bool) return DataBoolean.of(bool);
-        if (value instanceof BigDecimal decimal) return DataNumber.of(decimal);
-        if (value instanceof BigInteger integer) return DataNumber.of(integer);
-        if (value instanceof Number number) return DataNumber.of(decimalOf(number));
-        if (value instanceof Enum<?> constant) return new DataString(enumName(constant));
+        if (value == null) return Null.INSTANCE;
+        if (value instanceof Value data) return data;
+        if (value instanceof String string) return new Str(string);
+        if (value instanceof Character character) return new Str(character.toString());
+        if (value instanceof Boolean bool) return Bool.of(bool);
+        if (value instanceof BigDecimal decimal) return Num.of(decimal);
+        if (value instanceof BigInteger integer) return Num.of(integer);
+        if (value instanceof Number number) return Num.of(decimalOf(number));
+        if (value instanceof Enum<?> constant) return new Str(enumName(constant));
         if (value instanceof Optional<?> optional) {
-            return optional.isPresent() ? toValue(optional.get(), depth + 1) : DataNull.INSTANCE;
+            return optional.isPresent() ? toValue(optional.get(), depth + 1) : Null.INSTANCE;
         }
         if (value instanceof Map<?, ?> map) {
-            DataObject object = new DataObject(map.size());
+            Obj object = new Obj(map.size());
             for (Map.Entry<?, ?> entry : map.entrySet()) {
                 object.put(String.valueOf(entry.getKey()), toValue(entry.getValue(), depth + 1));
             }
             return object;
         }
         if (value instanceof Iterable<?> iterable) {
-            DataArray array = new DataArray();
+            Arr array = new Arr();
             for (Object element : iterable) array.add(toValue(element, depth + 1));
             return array;
         }
         if (value.getClass().isArray()) {
             int length = Array.getLength(value);
-            DataArray array = new DataArray(length);
+            Arr array = new Arr(length);
             for (int i = 0; i < length; i++) array.add(toValue(Array.get(value, i), depth + 1));
             return array;
         }
         return bean(value, depth);
     }
 
-    private DataObject bean(Object value, int depth) {
+    private Obj bean(Object value, int depth) {
         Class<?> type = value.getClass();
-        DataInclude include = type.getAnnotation(DataInclude.class);
-        boolean includeNulls = include == null || include.value() == DataInclude.Include.ALWAYS;
-        DataObject object = new DataObject();
+        Include include = type.getAnnotation(Include.class);
+        boolean includeNulls = include == null || include.value() == Include.Policy.ALWAYS;
+        Obj object = new Obj();
         if (type.isRecord()) {
             for (RecordComponent component : type.getRecordComponents()) {
-                if (component.isAnnotationPresent(DataIgnore.class)) continue;
-                String name = propertyName(component.getName(), component.getAnnotation(DataProperty.class));
+                if (component.isAnnotationPresent(Ignore.class)) continue;
+                String name = propertyName(component.getName(), component.getAnnotation(Property.class));
                 putProperty(object, name, invoke(component.getAccessor(), value, name), includeNulls, depth);
             }
         } else {
             for (Field field : instanceFields(type)) {
-                if (field.isAnnotationPresent(DataIgnore.class)) continue;
-                String name = propertyName(field.getName(), field.getAnnotation(DataProperty.class));
+                if (field.isAnnotationPresent(Ignore.class)) continue;
+                String name = propertyName(field.getName(), field.getAnnotation(Property.class));
                 putProperty(object, name, read(field, value, name), includeNulls, depth);
             }
         }
         return object;
     }
 
-    private void putProperty(DataObject object, String name, Object fieldValue, boolean includeNulls, int depth) {
+    private void putProperty(Obj object, String name, Object fieldValue, boolean includeNulls, int depth) {
         if (fieldValue != null || includeNulls) object.put(name, toValue(fieldValue, depth + 1));
     }
 
@@ -167,13 +167,13 @@ public final class DataMapper {
         return fields;
     }
 
-    static String propertyName(String fallback, DataProperty property) {
+    static String propertyName(String fallback, Property property) {
         return property == null || property.value().isEmpty() ? fallback : property.value();
     }
 
     static String enumName(Enum<?> constant) {
         try {
-            DataProperty property = constant.getDeclaringClass().getField(constant.name()).getAnnotation(DataProperty.class);
+            Property property = constant.getDeclaringClass().getField(constant.name()).getAnnotation(Property.class);
             return property == null || property.value().isEmpty() ? constant.name() : property.value();
         } catch (NoSuchFieldException e) {
             return constant.name();

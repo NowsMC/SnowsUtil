@@ -1,12 +1,12 @@
 package space.nows.util.json;
 
-import space.nows.util.data.DataArray;
-import space.nows.util.data.DataBoolean;
-import space.nows.util.data.DataNull;
-import space.nows.util.data.DataNumber;
-import space.nows.util.data.DataObject;
-import space.nows.util.data.DataString;
-import space.nows.util.data.DataValue;
+import space.nows.util.data.Arr;
+import space.nows.util.data.Bool;
+import space.nows.util.data.Null;
+import space.nows.util.data.Num;
+import space.nows.util.data.Obj;
+import space.nows.util.data.Str;
+import space.nows.util.data.Value;
 import space.nows.util.error.DataException;
 import space.nows.util.text.CharCursor;
 import space.nows.util.text.Hex;
@@ -25,10 +25,10 @@ final class JsonParser {
         this.in = new CharCursor(input);
     }
 
-    DataValue parseDocument() {
+    Value parseDocument() {
         try {
             skipWhitespace();
-            DataValue value = parseValue();
+            Value value = parseValue();
             skipWhitespace();
             if (in.peek() != EOF) throw in.error("trailing content after JSON value");
             return value;
@@ -37,15 +37,15 @@ final class JsonParser {
         }
     }
 
-    private DataValue parseValue() throws IOException {
+    private Value parseValue() throws IOException {
         int c = in.peek();
         return switch (c) {
             case '{' -> parseObject();
             case '[' -> parseArray();
-            case '"' -> new DataString(parseString());
-            case 't' -> { expect("true"); yield DataBoolean.TRUE; }
-            case 'f' -> { expect("false"); yield DataBoolean.FALSE; }
-            case 'n' -> { expect("null"); yield DataNull.INSTANCE; }
+            case '"' -> new Str(parseString());
+            case 't' -> { expect("true"); yield Bool.TRUE; }
+            case 'f' -> { expect("false"); yield Bool.FALSE; }
+            case 'n' -> { expect("null"); yield Null.INSTANCE; }
             case EOF -> throw in.error("unexpected end of input");
             default -> {
                 if (c == '-' || isDigit(c)) yield parseNumber();
@@ -54,10 +54,10 @@ final class JsonParser {
         };
     }
 
-    private DataObject parseObject() throws IOException {
+    private Obj parseObject() throws IOException {
         enterContainer();
         in.read();
-        DataObject object = new DataObject();
+        Obj object = new Obj();
         skipWhitespace();
         if (in.peek() == '}') {
             in.read();
@@ -83,10 +83,10 @@ final class JsonParser {
         }
     }
 
-    private DataArray parseArray() throws IOException {
+    private Arr parseArray() throws IOException {
         enterContainer();
         in.read();
-        DataArray array = new DataArray();
+        Arr array = new Arr();
         skipWhitespace();
         if (in.peek() == ']') {
             in.read();
@@ -107,7 +107,7 @@ final class JsonParser {
     }
 
     private void enterContainer() {
-        if (++depth > DataValue.MAX_DEPTH) throw in.error("maximum nesting depth " + DataValue.MAX_DEPTH + " exceeded");
+        if (++depth > Value.MAX_DEPTH) throw in.error("maximum nesting depth " + Value.MAX_DEPTH + " exceeded");
     }
 
     private String parseString() throws IOException {
@@ -168,7 +168,7 @@ final class JsonParser {
         return (char) value;
     }
 
-    private DataNumber parseNumber() throws IOException {
+    private Num parseNumber() throws IOException {
         StringBuilder number = new StringBuilder();
         if (in.peek() == '-') number.append((char) in.read());
         if (in.peek() == '0') {
@@ -190,7 +190,7 @@ final class JsonParser {
             appendDigits(number);
         }
         try {
-            return DataNumber.of(new BigDecimal(number.toString()));
+            return Num.of(new BigDecimal(number.toString()));
         } catch (NumberFormatException e) {
             throw new DataException("number out of range at char offset " + in.offset(), e);
         }

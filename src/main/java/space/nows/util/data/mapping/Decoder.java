@@ -1,13 +1,13 @@
 package space.nows.util.data.mapping;
 
 import space.nows.util.error.DataException;
-import space.nows.util.data.DataArray;
-import space.nows.util.data.DataBoolean;
-import space.nows.util.data.DataNull;
-import space.nows.util.data.DataNumber;
-import space.nows.util.data.DataObject;
-import space.nows.util.data.DataString;
-import space.nows.util.data.DataValue;
+import space.nows.util.data.Arr;
+import space.nows.util.data.Bool;
+import space.nows.util.data.Null;
+import space.nows.util.data.Num;
+import space.nows.util.data.Obj;
+import space.nows.util.data.Str;
+import space.nows.util.data.Value;
 
 import java.lang.reflect.Array;
 import java.lang.reflect.Constructor;
@@ -30,27 +30,27 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
-final class DataDecoder {
+final class Decoder {
     private final boolean failOnUnknown;
 
-    DataDecoder(boolean failOnUnknown) {
+    Decoder(boolean failOnUnknown) {
         this.failOnUnknown = failOnUnknown;
     }
 
-    Object decode(DataValue value, Type type) throws ReflectiveOperationException {
+    Object decode(Value value, Type type) throws ReflectiveOperationException {
         Class<?> target = rawType(type);
         Type[] arguments = type instanceof ParameterizedType parameterized
                 ? parameterized.getActualTypeArguments() : new Type[0];
         if (target == Object.class) return toJavaValue(value);
-        if (DataValue.class.isAssignableFrom(target)) {
+        if (Value.class.isAssignableFrom(target)) {
             if (target.isInstance(value)) return value;
             throw mismatch(target, value);
         }
         if (target == Optional.class) {
             Type element = arguments.length > 0 ? arguments[0] : Object.class;
-            return value instanceof DataNull ? Optional.empty() : Optional.ofNullable(decode(value, element));
+            return value instanceof Null ? Optional.empty() : Optional.ofNullable(decode(value, element));
         }
-        if (value instanceof DataNull) return defaultValue(target);
+        if (value instanceof Null) return defaultValue(target);
         if (target == String.class || target == CharSequence.class) return value.asString();
         if (target == char.class || target == Character.class) return singleChar(value);
         if (target == boolean.class || target == Boolean.class) return value.asBoolean();
@@ -75,44 +75,44 @@ final class DataDecoder {
         return target.isRecord() ? record(value.asObject(), target) : instance(value.asObject(), target);
     }
 
-    private Object array(DataArray array, Type type, Class<?> target) throws ReflectiveOperationException {
+    private Object array(Arr array, Type type, Class<?> target) throws ReflectiveOperationException {
         Type component = type instanceof GenericArrayType generic ? generic.getGenericComponentType() : target.getComponentType();
         Object result = Array.newInstance(rawType(component), array.size());
         for (int i = 0; i < array.size(); i++) Array.set(result, i, decode(array.get(i), component));
         return result;
     }
 
-    private Collection<Object> collection(DataArray array, Class<?> target, Type element) throws ReflectiveOperationException {
+    private Collection<Object> collection(Arr array, Class<?> target, Type element) throws ReflectiveOperationException {
         Collection<Object> result = Set.class.isAssignableFrom(target)
                 ? new LinkedHashSet<Object>() : new ArrayList<Object>(array.size());
         if (!target.isInstance(result)) throw new DataException("unsupported collection type: " + target.getTypeName());
-        for (DataValue item : array) result.add(decode(item, element));
+        for (Value item : array) result.add(decode(item, element));
         return result;
     }
 
-    private Map<Object, Object> map(DataObject object, Class<?> target, Type keyType, Type valueType)
+    private Map<Object, Object> map(Obj object, Class<?> target, Type keyType, Type valueType)
             throws ReflectiveOperationException {
         if (!target.isAssignableFrom(LinkedHashMap.class)) {
             throw new DataException("unsupported map type: " + target.getTypeName());
         }
         Map<Object, Object> result = new LinkedHashMap<>();
-        for (Map.Entry<String, DataValue> entry : object) {
-            result.put(decode(new DataString(entry.getKey()), keyType), decode(entry.getValue(), valueType));
+        for (Map.Entry<String, Value> entry : object) {
+            result.put(decode(new Str(entry.getKey()), keyType), decode(entry.getValue(), valueType));
         }
         return result;
     }
 
-    private Object record(DataObject object, Class<?> target) throws ReflectiveOperationException {
+    private Object record(Obj object, Class<?> target) throws ReflectiveOperationException {
         RecordComponent[] components = target.getRecordComponents();
         Class<?>[] parameterTypes = new Class<?>[components.length];
         Object[] arguments = new Object[components.length];
         Set<String> known = new HashSet<>();
         for (int i = 0; i < components.length; i++) {
             RecordComponent component = components[i];
-            String name = DataMapper.propertyName(component.getName(), component.getAnnotation(DataProperty.class));
+            String name = Mapper.propertyName(component.getName(), component.getAnnotation(Property.class));
             parameterTypes[i] = component.getType();
             known.add(name);
-            DataValue property = component.isAnnotationPresent(DataIgnore.class) ? null : object.get(name);
+            Value property = component.isAnnotationPresent(Ignore.class) ? null : object.get(name);
             arguments[i] = property == null ? defaultValue(component.getType()) : decode(property, component.getGenericType());
         }
         checkUnknown(object, known);
@@ -121,24 +121,24 @@ final class DataDecoder {
         return constructor.newInstance(arguments);
     }
 
-    private Object instance(DataObject object, Class<?> target) throws ReflectiveOperationException {
+    private Object instance(Obj object, Class<?> target) throws ReflectiveOperationException {
         Constructor<?> constructor = target.getDeclaredConstructor();
         if (!constructor.trySetAccessible()) throw new DataException("cannot access constructor: " + target.getName());
         Object instance = constructor.newInstance();
         Set<String> known = new HashSet<>();
-        for (Field field : DataMapper.instanceFields(target)) {
-            String name = DataMapper.propertyName(field.getName(), field.getAnnotation(DataProperty.class));
+        for (Field field : Mapper.instanceFields(target)) {
+            String name = Mapper.propertyName(field.getName(), field.getAnnotation(Property.class));
             known.add(name);
-            DataValue property = field.isAnnotationPresent(DataIgnore.class) ? null : object.get(name);
+            Value property = field.isAnnotationPresent(Ignore.class) ? null : object.get(name);
             if (property == null) continue;
-            if (!field.trySetAccessible()) throw DataMapper.inaccessible(name);
+            if (!field.trySetAccessible()) throw Mapper.inaccessible(name);
             field.set(instance, decode(property, field.getGenericType()));
         }
         checkUnknown(object, known);
         return instance;
     }
 
-    private void checkUnknown(DataObject object, Set<String> known) {
+    private void checkUnknown(Obj object, Set<String> known) {
         if (!failOnUnknown) return;
         for (String name : object.keys()) {
             if (!known.contains(name)) throw new DataException("unknown property: \"" + name + "\"");
@@ -148,7 +148,7 @@ final class DataDecoder {
     private static Object enumConstant(String name, Class<?> target) {
         Object[] constants = target.getEnumConstants();
         for (Object constant : constants) {
-            if (DataMapper.enumName((Enum<?>) constant).equals(name)) return constant;
+            if (Mapper.enumName((Enum<?>) constant).equals(name)) return constant;
         }
         for (Object constant : constants) {
             if (((Enum<?>) constant).name().equals(name)) return constant;
@@ -156,30 +156,30 @@ final class DataDecoder {
         throw new DataException("unknown " + target.getSimpleName() + " constant: \"" + name + "\"");
     }
 
-    private static char singleChar(DataValue value) {
+    private static char singleChar(Value value) {
         String text = value.asString();
         if (text.length() != 1) throw new DataException("expected a single character but got " + text.length() + " characters");
         return text.charAt(0);
     }
 
-    static Object toJavaValue(DataValue value) {
-        if (value instanceof DataNull) return null;
-        if (value instanceof DataBoolean bool) return bool.value();
-        if (value instanceof DataString string) return string.value();
-        if (value instanceof DataNumber number) return javaNumber(number);
-        if (value instanceof DataArray array) {
+    static Object toJavaValue(Value value) {
+        if (value instanceof Null) return null;
+        if (value instanceof Bool bool) return bool.value();
+        if (value instanceof Str string) return string.value();
+        if (value instanceof Num number) return javaNumber(number);
+        if (value instanceof Arr array) {
             List<Object> result = new ArrayList<>(array.size());
-            for (DataValue element : array) result.add(toJavaValue(element));
+            for (Value element : array) result.add(toJavaValue(element));
             return result;
         }
         Map<String, Object> result = new LinkedHashMap<>();
-        for (Map.Entry<String, DataValue> entry : value.asObject()) {
+        for (Map.Entry<String, Value> entry : value.asObject()) {
             result.put(entry.getKey(), toJavaValue(entry.getValue()));
         }
         return result;
     }
 
-    private static Object javaNumber(DataNumber number) {
+    private static Object javaNumber(Num number) {
         BigDecimal decimal = number.asDecimal();
         try {
             return decimal.intValueExact();
@@ -216,7 +216,7 @@ final class DataDecoder {
         return null;
     }
 
-    private static DataException mismatch(Class<?> target, DataValue value) {
+    private static DataException mismatch(Class<?> target, Value value) {
         return new DataException("cannot bind " + value.type().label() + " to " + target.getSimpleName());
     }
 }

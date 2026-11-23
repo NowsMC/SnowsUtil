@@ -1,8 +1,8 @@
 package space.nows.util.data.mapping;
 
 import org.junit.jupiter.api.Test;
-import space.nows.util.data.DataNull;
-import space.nows.util.data.DataValue;
+import space.nows.util.data.Null;
+import space.nows.util.data.Value;
 import space.nows.util.error.DataException;
 import space.nows.util.json.Json;
 
@@ -15,8 +15,8 @@ import java.util.Queue;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class DataMapperTest {
-    record Person(@DataProperty("full_name") String name, int age, List<String> tags) {}
+class MapperTest {
+    record Person(@Property("full_name") String name, int age, List<String> tags) {}
 
     record Wrapper(Optional<String> nickname, Map<String, Integer> scores, int[] counts) {}
 
@@ -24,14 +24,14 @@ class DataMapperTest {
         List<Person> people;
     }
 
-    @DataInclude(DataInclude.Include.NON_NULL)
+    @Include(Include.Policy.NON_NULL)
     static class Profile {
         String name;
-        @DataIgnore String secret;
+        @Ignore String secret;
     }
 
     enum Role {
-        @DataProperty("admin") ADMIN,
+        @Property("admin") ADMIN,
         USER
     }
 
@@ -44,11 +44,11 @@ class DataMapperTest {
     }
 
     private static <T> T bind(String json, Class<T> type) {
-        return new DataMapper().fromData(Json.parse(json), type);
+        return new Mapper().fromData(Json.parse(json), type);
     }
 
     private static String render(Object value) {
-        return Json.write(new DataMapper().toData(value));
+        return Json.write(new Mapper().toData(value));
     }
 
     @Test
@@ -63,7 +63,7 @@ class DataMapperTest {
     @Test
     void bindsGenericTypes() throws Exception {
         Type type = Holder.class.getDeclaredField("people").getGenericType();
-        List<Person> people = new DataMapper().fromData(Json.parse("""
+        List<Person> people = new Mapper().fromData(Json.parse("""
                 [{"full_name":"A","age":1,"tags":[]},{"full_name":"B","age":2,"tags":["x"]}]
                 """), type);
 
@@ -72,14 +72,14 @@ class DataMapperTest {
 
     @Test
     void mapsPlainTypesWithoutTargetClass() {
-        DataMapper mapper = new DataMapper();
+        Mapper mapper = new Mapper();
 
         @SuppressWarnings("unchecked")
         Map<String, Object> plain = mapper.fromData(Json.parse("{\"n\":1,\"nested\":[true,null]}"), Map.class);
         assertEquals(1, plain.get("n"));
         assertInstanceOf(List.class, plain.get("nested"));
         assertEquals(1, mapper.fromData(Json.parse("1"), Object.class));
-        assertSame(DataNull.INSTANCE, mapper.fromData(DataNull.INSTANCE, DataValue.class));
+        assertSame(Null.INSTANCE, mapper.fromData(Null.INSTANCE, Value.class));
 
         Collection<?> values = mapper.fromData(Json.parse("[1,2]"), Collection.class);
         assertEquals(List.of(1, 2), List.copyOf(values));
@@ -110,12 +110,12 @@ class DataMapperTest {
         String json = "{\"name\":\"Kai\",\"extra\":1}";
 
         assertThrows(DataException.class, () -> bind(json, Profile.class));
-        assertEquals("Kai", DataMapper.lenient().fromData(Json.parse(json), Profile.class).name);
+        assertEquals("Kai", Mapper.lenient().fromData(Json.parse(json), Profile.class).name);
     }
 
     @Test
     void enumsUseAnnotatedNamesAndFallBackToConstantNames() {
-        DataMapper mapper = new DataMapper();
+        Mapper mapper = new Mapper();
 
         assertEquals("admin", mapper.toData(Role.ADMIN).asString());
         assertEquals("USER", mapper.toData(Role.USER).asString());
@@ -136,6 +136,6 @@ class DataMapperTest {
     @Test
     void reportsBindingFailures() {
         assertThrows(DataException.class, () -> bind("{\"full_name\":\"A\",\"age\":1.5,\"tags\":[]}", Person.class));
-        assertThrows(DataException.class, () -> new DataMapper().toData(Double.NaN));
+        assertThrows(DataException.class, () -> new Mapper().toData(Double.NaN));
     }
 }

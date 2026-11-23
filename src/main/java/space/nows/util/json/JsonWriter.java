@@ -1,11 +1,11 @@
 package space.nows.util.json;
 
-import space.nows.util.data.DataArray;
-import space.nows.util.data.DataBoolean;
-import space.nows.util.data.DataNumber;
-import space.nows.util.data.DataObject;
-import space.nows.util.data.DataString;
-import space.nows.util.data.DataValue;
+import space.nows.util.data.Arr;
+import space.nows.util.data.Bool;
+import space.nows.util.data.Num;
+import space.nows.util.data.Obj;
+import space.nows.util.data.Str;
+import space.nows.util.data.Value;
 import space.nows.util.error.DataException;
 import space.nows.util.text.Hex;
 
@@ -21,31 +21,31 @@ final class JsonWriter {
         this.pretty = pretty;
     }
 
-    void write(DataValue value) throws IOException {
+    void write(Value value) throws IOException {
         write(value, 0);
     }
 
-    private void write(DataValue value, int depth) throws IOException {
-        if (depth > DataValue.MAX_DEPTH) throw new DataException("maximum nesting depth " + DataValue.MAX_DEPTH + " exceeded");
-        if (value instanceof DataObject object) {
+    private void write(Value value, int depth) throws IOException {
+        if (depth > Value.MAX_DEPTH) throw new DataException("maximum nesting depth " + Value.MAX_DEPTH + " exceeded");
+        if (value instanceof Obj object) {
             writeObject(object, depth);
-        } else if (value instanceof DataArray array) {
+        } else if (value instanceof Arr array) {
             writeArray(array, depth);
-        } else if (value instanceof DataString string) {
+        } else if (value instanceof Str string) {
             writeString(string.value());
-        } else if (value instanceof DataNumber number) {
+        } else if (value instanceof Num number) {
             output.append(number.asDecimal().toString());
-        } else if (value instanceof DataBoolean bool) {
+        } else if (value instanceof Bool bool) {
             output.append(bool.value() ? "true" : "false");
         } else {
             output.append("null");
         }
     }
 
-    private void writeObject(DataObject object, int depth) throws IOException {
+    private void writeObject(Obj object, int depth) throws IOException {
         output.append('{');
         boolean first = true;
-        for (Map.Entry<String, DataValue> entry : object) {
+        for (Map.Entry<String, Value> entry : object) {
             if (!first) output.append(',');
             first = false;
             newline(depth + 1);
@@ -57,10 +57,10 @@ final class JsonWriter {
         output.append('}');
     }
 
-    private void writeArray(DataArray array, int depth) throws IOException {
+    private void writeArray(Arr array, int depth) throws IOException {
         output.append('[');
         boolean first = true;
-        for (DataValue element : array) {
+        for (Value element : array) {
             if (!first) output.append(',');
             first = false;
             newline(depth + 1);

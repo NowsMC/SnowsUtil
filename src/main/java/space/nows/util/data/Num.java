@@ -7,31 +7,31 @@ import java.math.BigDecimal;
 import java.math.BigInteger;
 
 /** A JSON number held as an exact {@link BigDecimal}. Narrowing accessors throw {@link DataException} on overflow or loss. */
-public final class DataNumber implements DataValue {
+public final class Num implements Value {
     private final BigDecimal value;
 
-    private DataNumber(BigDecimal value) {
+    private Num(BigDecimal value) {
         this.value = value;
     }
 
-    public static DataNumber of(int value) { return new DataNumber(BigDecimal.valueOf(value)); }
+    public static Num of(int value) { return new Num(BigDecimal.valueOf(value)); }
 
-    public static DataNumber of(long value) { return new DataNumber(BigDecimal.valueOf(value)); }
+    public static Num of(long value) { return new Num(BigDecimal.valueOf(value)); }
 
-    public static DataNumber of(double value) {
+    public static Num of(double value) {
         Preconditions.argument(Double.isFinite(value), "JSON numbers must be finite but was " + value);
-        return new DataNumber(BigDecimal.valueOf(value));
+        return new Num(BigDecimal.valueOf(value));
     }
 
-    public static DataNumber of(BigDecimal value) { return new DataNumber(Preconditions.notNull(value, "value")); }
+    public static Num of(BigDecimal value) { return new Num(Preconditions.notNull(value, "value")); }
 
-    public static DataNumber of(BigInteger value) {
-        return new DataNumber(new BigDecimal(Preconditions.notNull(value, "value")));
+    public static Num of(BigInteger value) {
+        return new Num(new BigDecimal(Preconditions.notNull(value, "value")));
     }
 
-    @Override public DataType type() { return DataType.NUMBER; }
+    @Override public Kind type() { return Kind.NUMBER; }
 
-    @Override public DataNumber asNumber() { return this; }
+    @Override public Num asNumber() { return this; }
 
     public BigDecimal asDecimal() { return value; }
 
@@ -84,7 +84,7 @@ public final class DataNumber implements DataValue {
     }
 
     @Override public boolean equals(Object other) {
-        return other instanceof DataNumber number && value.compareTo(number.value) == 0;
+        return other instanceof Num number && value.compareTo(number.value) == 0;
     }
 
     @Override public int hashCode() { return value.stripTrailingZeros().hashCode(); }

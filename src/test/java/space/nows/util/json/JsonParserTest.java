@@ -14,7 +14,7 @@ import static org.junit.jupiter.api.Assertions.*;
 class JsonParserTest {
     @Test
     void parsesStringsNumbersAndNestedValues() {
-        DataObject object = Json.parse("""
+        Obj object = Json.parse("""
                 {"name":"สวัสดี","escaped":"line\\n\\uD83D\\uDE00","count":42,"large":123456789012345678901234567890}
                 """).asObject();
 
@@ -33,7 +33,7 @@ class JsonParserTest {
 
     @Test
     void readsUtf8FromBytesStreamsAndReaders() {
-        DataObject object = new DataObject().put("text", "สวัสดี");
+        Obj object = new Obj().put("text", "สวัสดี");
         String json = Json.write(object);
         byte[] bytes = json.getBytes(StandardCharsets.UTF_8);
 
@@ -57,7 +57,7 @@ class JsonParserTest {
 
     @Test
     void enforcesNestingLimit() {
-        assertDoesNotThrow(() -> Json.parse("[".repeat(DataValue.MAX_DEPTH) + "0" + "]".repeat(DataValue.MAX_DEPTH)));
-        assertThrows(DataException.class, () -> Json.parse("[".repeat(DataValue.MAX_DEPTH + 1) + "0" + "]".repeat(DataValue.MAX_DEPTH + 1)));
+        assertDoesNotThrow(() -> Json.parse("[".repeat(Value.MAX_DEPTH) + "0" + "]".repeat(Value.MAX_DEPTH)));
+        assertThrows(DataException.class, () -> Json.parse("[".repeat(Value.MAX_DEPTH + 1) + "0" + "]".repeat(Value.MAX_DEPTH + 1)));
     }
 }
