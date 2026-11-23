@@ -197,6 +197,13 @@ class EdgeCaseTest {
         assertTrue(space.nows.util.text.NumberParser.tryParseLong(null).isEmpty());
     }
 
+    @Test
+    void lerpIsExactAtEndpointsEvenWithInfiniteEndpoints() {
+        assertEquals(0.0, space.nows.util.math.Interpolation.lerp(0.0, Double.POSITIVE_INFINITY, 0.0));
+        assertEquals(Double.POSITIVE_INFINITY, space.nows.util.math.Interpolation.lerp(0.0, Double.POSITIVE_INFINITY, 1.0));
+        assertEquals(0f, space.nows.util.math.Interpolation.lerp(0f, Float.POSITIVE_INFINITY, 0f));
+    }
+
     private static <T> T parseOrNull(java.util.function.Supplier<T> parser) {
         try {
             return parser.get();
