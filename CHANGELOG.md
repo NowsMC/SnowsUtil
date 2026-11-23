@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.1.0 - 2026-11-23
+
+### JSON
+- Added a strict JSON value tree, parser and compact/pretty writers in `space.nows.util.json.Json`.
+- Added basic reflection mapping for records, POJOs, arrays, collections, maps, enums and optionals, with property/ignore/include annotations.
+
 ## 1.0.0 - 2026-11-22
 
 First release. Requires Java 17 and has no runtime dependencies.
