@@ -35,7 +35,7 @@ class ScalarMathTest {
         assertEquals(Integer.MAX_VALUE, Rounding.ceil(3e9f));
         assertEquals(Integer.MAX_VALUE, Rounding.ceil(3e9));
         assertEquals(Integer.MIN_VALUE, Rounding.ceil(-3e9));
-        assertEquals(0, Rounding.floor(Float.NaN));
+        assertThrows(IllegalArgumentException.class, () -> Rounding.floor(Float.NaN));
         assertEquals(Integer.MAX_VALUE, Rounding.floor(Float.POSITIVE_INFINITY));
     }
 
@@ -44,7 +44,7 @@ class ScalarMathTest {
         assertEquals(3, Rounding.round(2.5f));
         assertEquals(-2, Rounding.round(-2.5f));
         assertEquals(-3, Rounding.round(-2.6f));
-        assertEquals(0, Rounding.round(Float.NaN));
+        assertThrows(IllegalArgumentException.class, () -> Rounding.round(Float.NaN));
         assertEquals(Integer.MAX_VALUE, Rounding.round(1e20f));
         assertEquals(Integer.MAX_VALUE, Rounding.round(1e20));
         assertEquals(Integer.MIN_VALUE, Rounding.round(-1e20));
