@@ -10,7 +10,11 @@
 - `Mapper` reads map keys of numeric, boolean and enum types back from text, and writes enum keys by their property names.
 - JSON `-0` and `-0.0` keep their sign when read as `double` or `float`, and are written back as `-0`. The parser skips a leading byte order mark.
 
+### Collections
+- Added `OrderedObjectMap`, a hash map for object keys that iterates in insertion order without a node object per entry. `Obj` uses it instead of `LinkedHashMap`.
+
 ### Text
+- Added `Escapes`, the quoting rules shared by JSON and TOML basic strings. `JsonWriter` uses it.
 - Added `Utf8`: strict UTF-8 decoding that reports the offset of the invalid byte, and encoding without temporary arrays.
 - Added `CharCursor` for character-level parsers that report error offsets.
 - `Hex` gained `digitValue` and `lowerDigit`.
