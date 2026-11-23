@@ -35,9 +35,17 @@ public final class Num implements Value {
 
     public BigDecimal asDecimal() { return value; }
 
-    public double asDouble() { return value.doubleValue(); }
+    public double asDouble() {
+        double result = value.doubleValue();
+        if (Double.isInfinite(result)) throw new DataException("number " + value + " does not fit in double");
+        return result;
+    }
 
-    public float asFloat() { return value.floatValue(); }
+    public float asFloat() {
+        float result = value.floatValue();
+        if (Float.isInfinite(result)) throw new DataException("number " + value + " does not fit in float");
+        return result;
+    }
 
     public int asInt() {
         try {
