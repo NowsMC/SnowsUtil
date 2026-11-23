@@ -1,37 +1,37 @@
-package space.nows.util.json;
+package space.nows.util.data;
 
 import space.nows.util.check.Preconditions;
-import space.nows.util.error.JsonException;
+import space.nows.util.error.DataException;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
 
-/** A JSON number held as an exact {@link BigDecimal}. Narrowing accessors throw {@link JsonException} on overflow or loss. */
-public final class JsonNumber implements JsonValue {
+/** A JSON number held as an exact {@link BigDecimal}. Narrowing accessors throw {@link DataException} on overflow or loss. */
+public final class DataNumber implements DataValue {
     private final BigDecimal value;
 
-    private JsonNumber(BigDecimal value) {
+    private DataNumber(BigDecimal value) {
         this.value = value;
     }
 
-    public static JsonNumber of(int value) { return new JsonNumber(BigDecimal.valueOf(value)); }
+    public static DataNumber of(int value) { return new DataNumber(BigDecimal.valueOf(value)); }
 
-    public static JsonNumber of(long value) { return new JsonNumber(BigDecimal.valueOf(value)); }
+    public static DataNumber of(long value) { return new DataNumber(BigDecimal.valueOf(value)); }
 
-    public static JsonNumber of(double value) {
+    public static DataNumber of(double value) {
         Preconditions.argument(Double.isFinite(value), "JSON numbers must be finite but was " + value);
-        return new JsonNumber(BigDecimal.valueOf(value));
+        return new DataNumber(BigDecimal.valueOf(value));
     }
 
-    public static JsonNumber of(BigDecimal value) { return new JsonNumber(Preconditions.notNull(value, "value")); }
+    public static DataNumber of(BigDecimal value) { return new DataNumber(Preconditions.notNull(value, "value")); }
 
-    public static JsonNumber of(BigInteger value) {
-        return new JsonNumber(new BigDecimal(Preconditions.notNull(value, "value")));
+    public static DataNumber of(BigInteger value) {
+        return new DataNumber(new BigDecimal(Preconditions.notNull(value, "value")));
     }
 
-    @Override public JsonType type() { return JsonType.NUMBER; }
+    @Override public DataType type() { return DataType.NUMBER; }
 
-    @Override public JsonNumber asNumber() { return this; }
+    @Override public DataNumber asNumber() { return this; }
 
     public BigDecimal asDecimal() { return value; }
 
@@ -75,16 +75,16 @@ public final class JsonNumber implements JsonValue {
         try {
             return value.toBigIntegerExact();
         } catch (ArithmeticException e) {
-            throw new JsonException("number " + value + " is not an integer", e);
+            throw new DataException("number " + value + " is not an integer", e);
         }
     }
 
-    private JsonException outOfRange(String target, ArithmeticException cause) {
-        return new JsonException("number " + value + " does not fit in " + target, cause);
+    private DataException outOfRange(String target, ArithmeticException cause) {
+        return new DataException("number " + value + " does not fit in " + target, cause);
     }
 
     @Override public boolean equals(Object other) {
-        return other instanceof JsonNumber number && value.compareTo(number.value) == 0;
+        return other instanceof DataNumber number && value.compareTo(number.value) == 0;
     }
 
     @Override public int hashCode() { return value.stripTrailingZeros().hashCode(); }
