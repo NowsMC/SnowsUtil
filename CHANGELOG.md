@@ -6,6 +6,8 @@
 - Added the format-neutral value tree `space.nows.util.data.Value`, with `Obj`, `Arr`, `Str`, `Num`, `Bool`, `Null` and `Kind`.
 - Added `space.nows.util.data.mapping.Mapper` for converting between Java objects and value trees by reflection, with `Property`, `Ignore` and `Include` annotations. It supports records, classes including inherited fields, arrays, collections, maps, enums and optionals.
 - Added `space.nows.util.json.Json` for strict JSON parsing and compact or pretty writing.
+- `Mapper` rejects JSON `null` for primitive properties, duplicate property names (including fields shadowed by a subclass), and numbers that overflow `float` or `double`, instead of substituting a value.
+- `Mapper` reads map keys of numeric, boolean and enum types back from text, and writes enum keys by their property names.
 
 ### Text
 - Added `Utf8`: strict UTF-8 decoding that reports the offset of the invalid byte, and encoding without temporary arrays.
@@ -18,6 +20,9 @@
 
 ### Errors
 - Added `DataException` and `InvalidUtf8Exception`.
+
+### Fixed
+- `ObjectPool` keeps at most `maxIdle` released objects. `maxIdle()` returns the configured value rather than the queue's rounded capacity, and a pool with `maxIdle` of 0 keeps nothing.
 
 ## 1.0.0 - 2026-11-22
 
