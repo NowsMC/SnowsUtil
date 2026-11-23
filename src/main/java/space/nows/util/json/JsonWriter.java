@@ -8,6 +8,7 @@ import space.nows.util.data.Str;
 import space.nows.util.data.Value;
 import space.nows.util.error.DataException;
 import space.nows.util.text.Escapes;
+import space.nows.util.text.Hex;
 
 import java.io.IOException;
 import java.util.Map;
@@ -15,10 +16,16 @@ import java.util.Map;
 final class JsonWriter {
     private final Appendable output;
     private final boolean pretty;
+    private final WriteOptions options;
 
     JsonWriter(Appendable output, boolean pretty) {
+        this(output, pretty ? WriteOptions.PRETTY : WriteOptions.COMPACT);
+    }
+
+    JsonWriter(Appendable output, WriteOptions options) {
+        this.options = options;
         this.output = output;
-        this.pretty = pretty;
+        this.pretty = options.pretty();
     }
 
     void write(Value value) throws IOException {
@@ -77,6 +84,28 @@ final class JsonWriter {
     }
 
     private void writeString(String value) throws IOException {
-        Escapes.appendQuoted(value, output);
+        if (!options.escapeHtml() && !options.asciiOnly()) {
+            Escapes.appendQuoted(value, output);
+            return;
+        }
+        String quoted = Escapes.quote(value);
+        for (int i = 0, n = quoted.length(); i < n; i++) {
+            char c = quoted.charAt(i);
+            if (options.escapeHtml() && (c == '<' || c == '>' || c == '&')) {
+                appendHexEscape(c);
+            } else if (options.asciiOnly() && c > 0x7F) {
+                appendHexEscape(c);
+            } else {
+                output.append(c);
+            }
+        }
+    }
+
+    private void appendHexEscape(char c) throws IOException {
+        output.append("\\u")
+                .append(Hex.lowerDigit(c >>> 12))
+                .append(Hex.lowerDigit(c >>> 8))
+                .append(Hex.lowerDigit(c >>> 4))
+                .append(Hex.lowerDigit(c));
     }
 }
