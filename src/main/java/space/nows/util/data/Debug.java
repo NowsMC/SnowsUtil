@@ -1,5 +1,7 @@
 package space.nows.util.data;
 
+import space.nows.util.text.Escapes;
+
 import java.util.Map;
 
 /** Compact debug rendering used by {@code toString()}. It is not a serialization format; use a format's writer for output. */
@@ -41,17 +43,6 @@ final class Debug {
     }
 
     private static void quote(String text, StringBuilder out) {
-        out.append('"');
-        for (int i = 0; i < text.length(); i++) {
-            char c = text.charAt(i);
-            if (c == '"' || c == '\\') {
-                out.append('\\').append(c);
-            } else if (c < 0x20) {
-                out.append(String.format("\\u%04x", (int) c));
-            } else {
-                out.append(c);
-            }
-        }
-        out.append('"');
+        out.append(Escapes.quote(text));
     }
 }

@@ -7,7 +7,7 @@ import space.nows.util.data.Obj;
 import space.nows.util.data.Str;
 import space.nows.util.data.Value;
 import space.nows.util.error.DataException;
-import space.nows.util.text.Hex;
+import space.nows.util.text.Escapes;
 
 import java.io.IOException;
 import java.util.Map;
@@ -77,38 +77,6 @@ final class JsonWriter {
     }
 
     private void writeString(String value) throws IOException {
-        output.append('"');
-        for (int i = 0, n = value.length(); i < n; i++) {
-            char c = value.charAt(i);
-            switch (c) {
-                case '"' -> output.append("\\\"");
-                case '\\' -> output.append("\\\\");
-                case '\b' -> output.append("\\b");
-                case '\f' -> output.append("\\f");
-                case '\n' -> output.append("\\n");
-                case '\r' -> output.append("\\r");
-                case '\t' -> output.append("\\t");
-                default -> {
-                    if (c < 0x20) {
-                        appendUnicodeEscape(c);
-                    } else if (!Character.isSurrogate(c)) {
-                        output.append(c);
-                    } else if (Character.isHighSurrogate(c) && i + 1 < n && Character.isLowSurrogate(value.charAt(i + 1))) {
-                        output.append(c).append(value.charAt(++i));
-                    } else {
-                        appendUnicodeEscape(c);
-                    }
-                }
-            }
-        }
-        output.append('"');
-    }
-
-    private void appendUnicodeEscape(char c) throws IOException {
-        output.append("\\u")
-                .append(Hex.lowerDigit(c >>> 12))
-                .append(Hex.lowerDigit(c >>> 8))
-                .append(Hex.lowerDigit(c >>> 4))
-                .append(Hex.lowerDigit(c));
+        Escapes.appendQuoted(value, output);
     }
 }
