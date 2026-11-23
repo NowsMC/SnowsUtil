@@ -5,7 +5,15 @@
 ### Data and JSON
 - Added the format-neutral value tree `space.nows.util.data.Value`, with `Obj`, `Arr`, `Str`, `Num`, `Bool`, `Null` and `Kind`.
 - Added `space.nows.util.data.mapping.Mapper` for converting between Java objects and value trees by reflection, with `Property`, `Ignore` and `Include` annotations. It supports records, classes including inherited fields, arrays, collections, maps, enums and optionals.
-- Added `space.nows.util.json.Json` for strict JSON parsing and compact or pretty writing.
+- Added `space.nows.util.json.Json` for strict JSON parsing and compact or pretty writing. Strict is the default.
+- Added `ParseOptions` to accept comments, trailing commas, single quotes, unquoted keys, a leading `+`, leading zeros and hexadecimal numbers. Duplicate keys are rejected in every mode.
+- Added `Json.parseAuto`, which detects UTF-8, UTF-16 or UTF-32 from a byte order mark or the zero-byte pattern of the first code units.
+- Added `WriteOptions` for optional `<`, `>` and `&` escapes and ASCII-only output.
+- Parse errors report the line and column as well as the character offset.
+- The parser keeps nesting on an explicit stack, so the depth limit cannot overflow the thread's stack.
+- Added `JsonPointer` (RFC 6901), `JsonPatch` (RFC 6902 patch and RFC 7386 merge patch), `JsonLines` for lazily read JSON Lines, and `JsonPath` with wildcards, recursive descent, unions, slices and filters.
+- `Mapper` gained a naming strategy (`Naming.SNAKE_CASE`, `KEBAB_CASE`, `UPPER_SNAKE_CASE`), `@Required`, `@Creator` constructors for immutable classes, `@TypeInfo` polymorphism, `Adapter` for custom types, and built-in adapters for `UUID`, `URI`, `Path`, `File`, `Currency`, `Locale`, `Charset` and the `java.time` value types.
+- `Obj` and `Arr` are documented as not thread-safe.
 - `Mapper` rejects JSON `null` for primitive properties, duplicate property names (including fields shadowed by a subclass), and numbers that overflow `float` or `double`, instead of substituting a value.
 - `Mapper` reads map keys of numeric, boolean and enum types back from text, and writes enum keys by their property names.
 - JSON `-0` and `-0.0` keep their sign when read as `double` or `float`, and are written back as `-0`. The parser skips a leading byte order mark.
