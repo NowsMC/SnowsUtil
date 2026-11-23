@@ -84,7 +84,9 @@ public final class Mapper {
         if (value instanceof Map<?, ?> map) {
             Obj object = new Obj(map.size());
             for (Map.Entry<?, ?> entry : map.entrySet()) {
-                object.put(String.valueOf(entry.getKey()), toValue(entry.getValue(), depth + 1));
+                Object key = entry.getKey();
+                String name = key instanceof Enum<?> constant ? enumName(constant) : String.valueOf(key);
+                object.put(name, toValue(entry.getValue(), depth + 1));
             }
             return object;
         }
@@ -124,6 +126,7 @@ public final class Mapper {
     }
 
     private void putProperty(Obj object, String name, Object fieldValue, boolean includeNulls, int depth) {
+        if (object.has(name)) throw new DataException("duplicate property \"" + name + "\"");
         if (fieldValue != null || includeNulls) object.put(name, toValue(fieldValue, depth + 1));
     }
 

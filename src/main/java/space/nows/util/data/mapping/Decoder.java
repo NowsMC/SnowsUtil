@@ -97,9 +97,32 @@ final class Decoder {
         }
         Map<Object, Object> result = new LinkedHashMap<>();
         for (Map.Entry<String, Value> entry : object) {
-            result.put(decode(new Str(entry.getKey()), keyType), decode(entry.getValue(), valueType));
+            result.put(decode(keyValue(entry.getKey(), keyType), keyType), decode(entry.getValue(), valueType));
         }
         return result;
+    }
+
+    private static Value keyValue(String key, Type keyType) throws ReflectiveOperationException {
+        Class<?> raw = rawType(keyType);
+        if (isNumeric(raw)) {
+            try {
+                return Num.of(new BigDecimal(key));
+            } catch (NumberFormatException e) {
+                throw new DataException("map key \"" + key + "\" is not a number", e);
+            }
+        }
+        if (raw == boolean.class || raw == Boolean.class) {
+            if (key.equals("true") || key.equals("false")) return Bool.of(Boolean.parseBoolean(key));
+            throw new DataException("map key \"" + key + "\" is not a boolean");
+        }
+        return new Str(key);
+    }
+
+    private static boolean isNumeric(Class<?> c) {
+        return c == int.class || c == Integer.class || c == long.class || c == Long.class
+                || c == short.class || c == Short.class || c == byte.class || c == Byte.class
+                || c == double.class || c == Double.class || c == float.class || c == Float.class
+                || c == BigInteger.class || c == BigDecimal.class || c == Number.class;
     }
 
     private Object record(Obj object, Class<?> target) throws ReflectiveOperationException {
@@ -111,7 +134,7 @@ final class Decoder {
             RecordComponent component = components[i];
             String name = Mapper.propertyName(component.getName(), component.getAnnotation(Property.class));
             parameterTypes[i] = component.getType();
-            known.add(name);
+            if (!known.add(name)) throw new DataException("duplicate property \"" + name + "\" in " + target.getSimpleName());
             Value property = component.isAnnotationPresent(Ignore.class) ? null : object.get(name);
             arguments[i] = property == null ? defaultValue(component.getType()) : decode(property, component.getGenericType());
         }
@@ -128,7 +151,7 @@ final class Decoder {
         Set<String> known = new HashSet<>();
         for (Field field : Mapper.instanceFields(target)) {
             String name = Mapper.propertyName(field.getName(), field.getAnnotation(Property.class));
-            known.add(name);
+            if (!known.add(name)) throw new DataException("duplicate property \"" + name + "\" in " + target.getSimpleName());
             Value property = field.isAnnotationPresent(Ignore.class) ? null : object.get(name);
             if (property == null) continue;
             if (!field.trySetAccessible()) throw Mapper.inaccessible(name);
