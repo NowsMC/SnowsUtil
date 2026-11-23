@@ -1,5 +1,8 @@
 package space.nows.util.text;
 
+import java.util.OptionalInt;
+import java.util.OptionalLong;
+
 /**
  * Lenient number parsing that returns a fallback instead of throwing. Integer parsers accept an optional
  * sign followed by ASCII digits only, and never use exceptions for control flow.
@@ -50,6 +53,42 @@ public final class NumberParser {
             result -= d;
         }
         return neg ? result : -result;
+    }
+
+    /**
+     * Parses an optional sign followed by ASCII digits, like {@link #parseInt(String, int)}, but reports failure
+     * explicitly so every {@code int} value is a valid result.
+     */
+    public static OptionalInt tryParseInt(CharSequence s) {
+        OptionalLong value = tryParseLong(s);
+        if (value.isEmpty()) return OptionalInt.empty();
+        long v = value.getAsLong();
+        return v < Integer.MIN_VALUE || v > Integer.MAX_VALUE ? OptionalInt.empty() : OptionalInt.of((int) v);
+    }
+
+    /** Parses an optional sign followed by ASCII digits; empty if the text is malformed or out of {@code long} range. */
+    public static OptionalLong tryParseLong(CharSequence s) {
+        if (s == null) return OptionalLong.empty();
+        int len = s.length(), i = 0;
+        if (len == 0) return OptionalLong.empty();
+        boolean neg = false;
+        char c0 = s.charAt(0);
+        if (c0 == '-' || c0 == '+') {
+            neg = c0 == '-';
+            if (++i == len) return OptionalLong.empty();
+        }
+        long limit = neg ? Long.MIN_VALUE : -Long.MAX_VALUE;
+        long multMin = limit / 10;
+        long result = 0;
+        for (; i < len; i++) {
+            int d = s.charAt(i) - '0';
+            if (d < 0 || d > 9) return OptionalLong.empty();
+            if (result < multMin) return OptionalLong.empty();
+            result *= 10;
+            if (result < limit + d) return OptionalLong.empty();
+            result -= d;
+        }
+        return OptionalLong.of(neg ? result : -result);
     }
 
     /** {@code "true"} or {@code "false"} in any case; anything else returns {@code fallback}. */

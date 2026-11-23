@@ -11,6 +11,7 @@
 - Added `Utf8`: strict UTF-8 decoding that reports the offset of the invalid byte, and encoding without temporary arrays.
 - Added `CharCursor` for character-level parsers that report error offsets.
 - `Hex` gained `digitValue` and `lowerDigit`.
+- `NumberParser` gained `tryParseInt` and `tryParseLong`, which report malformed or out-of-range text as an empty result.
 
 ### I/O
 - `ByteBuf.writeUtf8` and `writeString` no longer allocate a temporary byte array. The output bytes are unchanged.
