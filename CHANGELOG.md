@@ -2,9 +2,21 @@
 
 ## 1.1.0 - 2026-11-23
 
-### JSON
-- Added a strict JSON value tree, parser and compact/pretty writers in `space.nows.util.json.Json`.
-- Added basic reflection mapping for records, POJOs, arrays, collections, maps, enums and optionals, with property/ignore/include annotations.
+### Data and JSON
+- Added the format-neutral value tree `space.nows.util.data.Value`, with `Obj`, `Arr`, `Str`, `Num`, `Bool`, `Null` and `Kind`.
+- Added `space.nows.util.data.mapping.Mapper` for converting between Java objects and value trees by reflection, with `Property`, `Ignore` and `Include` annotations. It supports records, classes including inherited fields, arrays, collections, maps, enums and optionals.
+- Added `space.nows.util.json.Json` for strict JSON parsing and compact or pretty writing.
+
+### Text
+- Added `Utf8`: strict UTF-8 decoding that reports the offset of the invalid byte, and encoding without temporary arrays.
+- Added `CharCursor` for character-level parsers that report error offsets.
+- `Hex` gained `digitValue` and `lowerDigit`.
+
+### I/O
+- `ByteBuf.writeUtf8` and `writeString` no longer allocate a temporary byte array. The output bytes are unchanged.
+
+### Errors
+- Added `DataException` and `InvalidUtf8Exception`.
 
 ## 1.0.0 - 2026-11-22
 
