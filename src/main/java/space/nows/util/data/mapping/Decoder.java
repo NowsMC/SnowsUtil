@@ -13,6 +13,7 @@ import java.lang.reflect.Array;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.GenericArrayType;
+import java.lang.reflect.Parameter;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.RecordComponent;
 import java.lang.reflect.Type;
@@ -31,10 +32,10 @@ import java.util.Optional;
 import java.util.Set;
 
 final class Decoder {
-    private final boolean failOnUnknown;
+    private final Settings settings;
 
-    Decoder(boolean failOnUnknown) {
-        this.failOnUnknown = failOnUnknown;
+    Decoder(Settings settings) {
+        this.settings = settings;
     }
 
     Object decode(Value value, Type type) throws ReflectiveOperationException {
@@ -54,6 +55,8 @@ final class Decoder {
             if (target.isPrimitive()) throw new DataException("cannot bind null to " + target.getName());
             return null;
         }
+        Adapter<?> adapter = settings.adapters().get(target);
+        if (adapter != null) return adapter.read(value);
         if (target == String.class || target == CharSequence.class) return value.asString();
         if (target == char.class || target == Character.class) return singleChar(value);
         if (target == boolean.class || target == Boolean.class) return value.asBoolean();
@@ -75,7 +78,37 @@ final class Decoder {
             Type valueType = arguments.length > 1 ? arguments[1] : Object.class;
             return map(value.asObject(), target, keyType, valueType);
         }
-        return target.isRecord() ? record(value.asObject(), target) : instance(value.asObject(), target);
+        if (target.isAnnotationPresent(TypeInfo.class)) return polymorphic(value.asObject(), target);
+        Obj object = withoutTag(value.asObject(), target);
+        return target.isRecord() ? record(object, target) : instance(object, target);
+    }
+
+    private Object polymorphic(Obj object, Class<?> base) throws ReflectiveOperationException {
+        TypeInfo info = base.getAnnotation(TypeInfo.class);
+        Value tag = object.get(info.property());
+        if (tag == null) throw new DataException("missing type property \"" + info.property() + "\" for " + base.getSimpleName());
+        String name = tag.asString();
+        for (TypeInfo.SubType sub : info.subtypes()) {
+            if (sub.name().equals(name)) {
+                if (!base.isAssignableFrom(sub.type())) {
+                    throw new DataException(sub.type().getSimpleName() + " is not a " + base.getSimpleName());
+                }
+                Obj rest = withoutTag(object, sub.type());
+                return sub.type().isRecord() ? record(rest, sub.type()) : instance(rest, sub.type());
+            }
+        }
+        throw new DataException("unknown " + base.getSimpleName() + " type \"" + name + "\"");
+    }
+
+    /** Drops the discriminator of a listed subtype so it is not reported as an unknown property. */
+    private static Obj withoutTag(Obj object, Class<?> target) {
+        Mapper.Tag tag = Mapper.tagFor(target);
+        if (tag == null || !object.has(tag.property())) return object;
+        Obj copy = new Obj(object.size());
+        for (Map.Entry<String, Value> entry : object) {
+            if (!entry.getKey().equals(tag.property())) copy.put(entry.getKey(), entry.getValue());
+        }
+        return copy;
     }
 
     private Object array(Arr array, Type type, Class<?> target) throws ReflectiveOperationException {
@@ -135,11 +168,12 @@ final class Decoder {
         Set<String> known = new HashSet<>();
         for (int i = 0; i < components.length; i++) {
             RecordComponent component = components[i];
-            String name = Mapper.propertyName(component.getName(), component.getAnnotation(Property.class));
+            String name = settings.propertyName(component.getName(), component.getAnnotation(Property.class));
             parameterTypes[i] = component.getType();
             if (!known.add(name)) throw new DataException("duplicate property \"" + name + "\" in " + target.getSimpleName());
             Value property = component.isAnnotationPresent(Ignore.class) ? null : object.get(name);
-            arguments[i] = property == null ? defaultValue(component.getType()) : decode(property, component.getGenericType());
+            arguments[i] = bindValue(property, component.getGenericType(), component.getType(),
+                    component.isAnnotationPresent(Required.class), name);
         }
         checkUnknown(object, known);
         Constructor<?> constructor = target.getDeclaredConstructor(parameterTypes);
@@ -148,14 +182,56 @@ final class Decoder {
     }
 
     private Object instance(Obj object, Class<?> target) throws ReflectiveOperationException {
+        Constructor<?> creator = creatorOf(target);
+        if (creator != null) return creatorInstance(object, target, creator);
         Constructor<?> constructor = target.getDeclaredConstructor();
         if (!constructor.trySetAccessible()) throw new DataException("cannot access constructor: " + target.getName());
         Object instance = constructor.newInstance();
         Set<String> known = new HashSet<>();
         for (Field field : Mapper.instanceFields(target)) {
-            String name = Mapper.propertyName(field.getName(), field.getAnnotation(Property.class));
+            String name = settings.propertyName(field.getName(), field.getAnnotation(Property.class));
             if (!known.add(name)) throw new DataException("duplicate property \"" + name + "\" in " + target.getSimpleName());
             Value property = field.isAnnotationPresent(Ignore.class) ? null : object.get(name);
+            if (property == null && !field.isAnnotationPresent(Required.class)) continue;
+            Object bound = bindValue(property, field.getGenericType(), field.getType(), field.isAnnotationPresent(Required.class), name);
+            if (property == null) continue;
+            if (!field.trySetAccessible()) throw Mapper.inaccessible(name);
+            field.set(instance, bound);
+        }
+        checkUnknown(object, known);
+        return instance;
+    }
+
+    /** Constructor marked {@link Creator}, or {@code null} if the class has none. */
+    private static Constructor<?> creatorOf(Class<?> target) {
+        for (Constructor<?> constructor : target.getDeclaredConstructors()) {
+            if (constructor.isAnnotationPresent(Creator.class)) return constructor;
+        }
+        return null;
+    }
+
+    private Object creatorInstance(Obj object, Class<?> target, Constructor<?> creator) throws ReflectiveOperationException {
+        Parameter[] parameters = creator.getParameters();
+        Object[] arguments = new Object[parameters.length];
+        Set<String> known = new HashSet<>();
+        for (int i = 0; i < parameters.length; i++) {
+            Property property = parameters[i].getAnnotation(Property.class);
+            if (property == null || property.value().isEmpty()) {
+                throw new DataException("creator parameter " + (i + 1) + " of " + target.getSimpleName()
+                        + " needs @Property(\"name\")");
+            }
+            String name = property.value();
+            if (!known.add(name)) throw new DataException("duplicate property \"" + name + "\" in " + target.getSimpleName());
+            arguments[i] = bindValue(object.get(name), parameters[i].getParameterizedType(), parameters[i].getType(),
+                    parameters[i].isAnnotationPresent(Required.class), name);
+        }
+        if (!creator.trySetAccessible()) throw new DataException("cannot access creator of " + target.getName());
+        Object instance = creator.newInstance(arguments);
+        for (Field field : Mapper.instanceFields(target)) {
+            String name = settings.propertyName(field.getName(), field.getAnnotation(Property.class));
+            if (known.contains(name) || field.isAnnotationPresent(Ignore.class)) continue;
+            known.add(name);
+            Value property = object.get(name);
             if (property == null) continue;
             if (!field.trySetAccessible()) throw Mapper.inaccessible(name);
             field.set(instance, decode(property, field.getGenericType()));
@@ -164,8 +240,18 @@ final class Decoder {
         return instance;
     }
 
+    /** Decodes one property, applying {@link Required} and the default for an absent value. */
+    private Object bindValue(Value property, Type genericType, Class<?> rawType, boolean required, String name)
+            throws ReflectiveOperationException {
+        if (property == null || (property instanceof Null && required)) {
+            if (required) throw new DataException("missing required property \"" + name + "\"");
+            return defaultValue(rawType);
+        }
+        return decode(property, genericType);
+    }
+
     private void checkUnknown(Obj object, Set<String> known) {
-        if (!failOnUnknown) return;
+        if (!settings.failOnUnknown()) return;
         for (String name : object.keys()) {
             if (!known.contains(name)) throw new DataException("unknown property: \"" + name + "\"");
         }

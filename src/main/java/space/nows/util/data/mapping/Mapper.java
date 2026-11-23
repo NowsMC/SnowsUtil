@@ -19,16 +19,23 @@ import java.lang.reflect.Type;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 /**
  * Converts between Java objects and {@link Value} trees by reflection. Supports records, classes with a
- * no-argument constructor (including inherited fields), enums, arrays, collections, maps and {@link Optional}.
- * The mapper is independent of any text format; pair it with a format's parser and writer.
+ * no-argument constructor or a {@link Creator} constructor (including inherited fields), enums, arrays, collections,
+ * maps, {@link Optional}, standard types such as {@code UUID} and {@code java.time} values, polymorphic types marked
+ * with {@link TypeInfo}, and types with a registered {@link Adapter}. The mapper is independent of any text format.
+ *
+ * <p>Configure a mapper ({@link #naming(Naming)}, {@link #register(Class, Adapter)}) before sharing it between threads;
+ * after that it is safe to use concurrently.
  */
 public final class Mapper {
+    private final Settings settings;
     private final Decoder decoder;
 
     /** Rejects properties that have no matching Java property. */
@@ -37,12 +44,25 @@ public final class Mapper {
     }
 
     private Mapper(boolean failOnUnknown) {
-        decoder = new Decoder(failOnUnknown);
+        settings = new Settings(failOnUnknown);
+        decoder = new Decoder(settings);
     }
 
     /** Ignores properties that have no matching Java property. */
     public static Mapper lenient() {
         return new Mapper(false);
+    }
+
+    /** Sets how member names become property names when no {@link Property} gives one. Returns this mapper. */
+    public Mapper naming(Naming naming) {
+        settings.naming(Preconditions.notNull(naming, "naming"));
+        return this;
+    }
+
+    /** Uses {@code adapter} for values of exactly {@code type}, replacing any built-in adapter. Returns this mapper. */
+    public <T> Mapper register(Class<T> type, Adapter<T> adapter) {
+        settings.adapters().put(Preconditions.notNull(type, "type"), Preconditions.notNull(adapter, "adapter"));
+        return this;
     }
 
     public Value toData(Object value) {
@@ -65,12 +85,15 @@ public final class Mapper {
         }
     }
 
+    @SuppressWarnings("unchecked")
     private Value toValue(Object value, int depth) {
         if (depth > Value.MAX_DEPTH) {
             throw new DataException("maximum nesting depth " + Value.MAX_DEPTH + " exceeded");
         }
         if (value == null) return Null.INSTANCE;
         if (value instanceof Value data) return data;
+        Adapter<Object> adapter = (Adapter<Object>) adapterFor(value.getClass());
+        if (adapter != null) return adapter.write(value);
         if (value instanceof String string) return new Str(string);
         if (value instanceof Character character) return new Str(character.toString());
         if (value instanceof Boolean bool) return Bool.of(bool);
@@ -106,21 +129,32 @@ public final class Mapper {
         return bean(value, depth);
     }
 
+    /** Adapter for the nearest registered supertype of {@code type}; runtime classes such as {@code UnixPath} match {@code Path}. */
+    private Adapter<?> adapterFor(Class<?> type) {
+        for (Class<?> candidate : supertypes(type)) {
+            Adapter<?> adapter = settings.adapters().get(candidate);
+            if (adapter != null) return adapter;
+        }
+        return null;
+    }
+
     private Obj bean(Object value, int depth) {
         Class<?> type = value.getClass();
         Include include = type.getAnnotation(Include.class);
         boolean includeNulls = include == null || include.value() == Include.Policy.ALWAYS;
         Obj object = new Obj();
+        Tag tag = tagFor(type);
+        if (tag != null) object.put(tag.property(), tag.name());
         if (type.isRecord()) {
             for (RecordComponent component : type.getRecordComponents()) {
                 if (component.isAnnotationPresent(Ignore.class)) continue;
-                String name = propertyName(component.getName(), component.getAnnotation(Property.class));
+                String name = settings.propertyName(component.getName(), component.getAnnotation(Property.class));
                 putProperty(object, name, invoke(component.getAccessor(), value, name), includeNulls, depth);
             }
         } else {
             for (Field field : instanceFields(type)) {
                 if (field.isAnnotationPresent(Ignore.class)) continue;
-                String name = propertyName(field.getName(), field.getAnnotation(Property.class));
+                String name = settings.propertyName(field.getName(), field.getAnnotation(Property.class));
                 putProperty(object, name, read(field, value, name), includeNulls, depth);
             }
         }
@@ -172,10 +206,6 @@ public final class Mapper {
         return fields;
     }
 
-    static String propertyName(String fallback, Property property) {
-        return property == null || property.value().isEmpty() ? fallback : property.value();
-    }
-
     static String enumName(Enum<?> constant) {
         try {
             Property property = constant.getDeclaringClass().getField(constant.name()).getAnnotation(Property.class);
@@ -183,6 +213,34 @@ public final class Mapper {
         } catch (NoSuchFieldException e) {
             return constant.name();
         }
+    }
+
+    /** The discriminator a subtype is written with, or {@code null} if {@code type} is not a listed subtype. */
+    record Tag(String property, String name) {}
+
+    static Tag tagFor(Class<?> type) {
+        for (Class<?> candidate : supertypes(type)) {
+            TypeInfo info = candidate.getAnnotation(TypeInfo.class);
+            if (info == null) continue;
+            for (TypeInfo.SubType sub : info.subtypes()) {
+                if (sub.type() == type) return new Tag(info.property(), sub.name());
+            }
+        }
+        return null;
+    }
+
+    /** {@code type} itself, then its superclasses and every interface, nearest first. */
+    static List<Class<?>> supertypes(Class<?> type) {
+        Set<Class<?>> out = new LinkedHashSet<>();
+        List<Class<?>> pending = new ArrayList<>();
+        pending.add(type);
+        while (!pending.isEmpty()) {
+            Class<?> current = pending.remove(0);
+            if (current == null || !out.add(current)) continue;
+            pending.add(current.getSuperclass());
+            pending.addAll(List.of(current.getInterfaces()));
+        }
+        return new ArrayList<>(out);
     }
 
     private static BigDecimal decimalOf(Number number) {
