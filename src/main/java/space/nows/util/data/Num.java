@@ -9,24 +9,30 @@ import java.math.BigInteger;
 /** A JSON number held as an exact {@link BigDecimal}. Narrowing accessors throw {@link DataException} on overflow or loss. */
 public final class Num implements Value {
     private final BigDecimal value;
+    private final boolean negativeZero;
 
-    private Num(BigDecimal value) {
+    private Num(BigDecimal value, boolean negativeZero) {
         this.value = value;
+        this.negativeZero = negativeZero;
     }
 
-    public static Num of(int value) { return new Num(BigDecimal.valueOf(value)); }
+    /** The JSON number {@code -0}. Equal to zero, but {@link #asDouble()} and the JSON output keep the sign. */
+    public static Num negativeZero() { return new Num(BigDecimal.ZERO, true); }
 
-    public static Num of(long value) { return new Num(BigDecimal.valueOf(value)); }
+    public static Num of(int value) { return new Num(BigDecimal.valueOf(value), false); }
+
+    public static Num of(long value) { return new Num(BigDecimal.valueOf(value), false); }
 
     public static Num of(double value) {
         Preconditions.argument(Double.isFinite(value), "JSON numbers must be finite but was " + value);
-        return new Num(BigDecimal.valueOf(value));
+        if (value == 0 && 1 / value < 0) return negativeZero();
+        return new Num(BigDecimal.valueOf(value), false);
     }
 
-    public static Num of(BigDecimal value) { return new Num(Preconditions.notNull(value, "value")); }
+    public static Num of(BigDecimal value) { return new Num(Preconditions.notNull(value, "value"), false); }
 
     public static Num of(BigInteger value) {
-        return new Num(new BigDecimal(Preconditions.notNull(value, "value")));
+        return new Num(new BigDecimal(Preconditions.notNull(value, "value")), false);
     }
 
     @Override public Kind type() { return Kind.NUMBER; }
@@ -36,12 +42,14 @@ public final class Num implements Value {
     public BigDecimal asDecimal() { return value; }
 
     public double asDouble() {
+        if (negativeZero) return -0.0;
         double result = value.doubleValue();
         if (Double.isInfinite(result)) throw new DataException("number " + value + " does not fit in double");
         return result;
     }
 
     public float asFloat() {
+        if (negativeZero) return -0.0f;
         float result = value.floatValue();
         if (Float.isInfinite(result)) throw new DataException("number " + value + " does not fit in float");
         return result;
@@ -97,5 +105,5 @@ public final class Num implements Value {
 
     @Override public int hashCode() { return value.stripTrailingZeros().hashCode(); }
 
-    @Override public String toString() { return value.toString(); }
+    @Override public String toString() { return negativeZero ? "-0" : value.toString(); }
 }

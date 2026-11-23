@@ -34,7 +34,7 @@ final class JsonWriter {
         } else if (value instanceof Str string) {
             writeString(string.value());
         } else if (value instanceof Num number) {
-            output.append(number.asDecimal().toString());
+            output.append(number.toString());
         } else if (value instanceof Bool bool) {
             output.append(bool.value() ? "true" : "false");
         } else {

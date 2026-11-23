@@ -18,6 +18,8 @@ import java.math.BigDecimal;
 import static space.nows.util.text.CharCursor.EOF;
 
 final class JsonParser {
+    private static final int BYTE_ORDER_MARK = 0xFEFF;
+
     private final CharCursor in;
     private int depth;
 
@@ -27,6 +29,7 @@ final class JsonParser {
 
     Value parseDocument() {
         try {
+            if (in.peek() == BYTE_ORDER_MARK) in.read();
             skipWhitespace();
             Value value = parseValue();
             skipWhitespace();
@@ -190,7 +193,9 @@ final class JsonParser {
             appendDigits(number);
         }
         try {
-            return Num.of(new BigDecimal(number.toString()));
+            BigDecimal decimal = new BigDecimal(number.toString());
+            boolean negative = number.charAt(0) == '-';
+            return decimal.signum() == 0 && negative ? Num.negativeZero() : Num.of(decimal);
         } catch (NumberFormatException e) {
             throw new DataException("number out of range at char offset " + in.offset(), e);
         }

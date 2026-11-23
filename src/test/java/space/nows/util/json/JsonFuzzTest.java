@@ -100,7 +100,11 @@ class JsonFuzzTest {
 
     @Test
     void knownHardInputs() {
-        assertThrows(DataException.class, () -> Json.parse("\uFEFF{}"), "BOM is rejected, not silently skipped");
+        assertEquals(new Obj(), Json.parse("\uFEFF{}"), "a leading byte order mark is skipped");
+        assertThrows(DataException.class, () -> Json.parse("{}\uFEFF"), "a byte order mark is only allowed at the start");
+        assertEquals("-0", Json.write(Json.parse("-0.0")));
+        assertEquals(-0.0, Json.parse("-0.0").asNumber().asDouble());
+        assertEquals(0.0, Json.parse("0.0").asNumber().asDouble());
         assertThrows(DataException.class, () -> Json.parse("\"\\u0000\\uD800\""));
         assertEquals(new Str("\u0000"), Json.parse("\"\\u0000\""));
         assertEquals(new Str("\uD83D\uDE00"), Json.parse("\"\\uD83D\\uDE00\""));

@@ -159,7 +159,9 @@ class OddCasesTest {
         Mapper mapper = new Mapper();
         long big = (1L << 53) + 1;
         assertEquals(big, mapper.fromData(mapper.toData(big), Long.class));
-        assertEquals(0.0, mapper.fromData(mapper.toData(-0.0), Double.class), "BigDecimal has no negative zero");
+        assertEquals(-0.0, mapper.fromData(mapper.toData(-0.0), Double.class));
+        assertEquals(-0.0f, mapper.fromData(mapper.toData(-0.0f), Float.class));
+        assertEquals("-0", Json.write(mapper.toData(-0.0)));
         assertEquals(Long.MIN_VALUE, mapper.fromData(mapper.toData(Long.MIN_VALUE), Long.class));
     }
 

@@ -76,6 +76,8 @@ public final class Mapper {
         if (value instanceof Boolean bool) return Bool.of(bool);
         if (value instanceof BigDecimal decimal) return Num.of(decimal);
         if (value instanceof BigInteger integer) return Num.of(integer);
+        if (value instanceof Double d && d == 0 && 1 / d < 0) return Num.negativeZero();
+        if (value instanceof Float f && f == 0 && 1 / f < 0) return Num.negativeZero();
         if (value instanceof Number number) return Num.of(decimalOf(number));
         if (value instanceof Enum<?> constant) return new Str(enumName(constant));
         if (value instanceof Optional<?> optional) {
