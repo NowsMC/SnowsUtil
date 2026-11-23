@@ -3,22 +3,23 @@ package space.nows.util.data;
 import space.nows.util.check.Preconditions;
 import space.nows.util.error.DataException;
 
+import space.nows.util.collections.OrderedObjectMap;
+
 import java.util.Collections;
 import java.util.Iterator;
-import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
 
 /** Mutable JSON object that keeps insertion order. */
 public final class Obj implements Value, Iterable<Map.Entry<String, Value>> {
-    private final LinkedHashMap<String, Value> values;
+    private final OrderedObjectMap<String, Value> values;
 
     public Obj() {
-        values = new LinkedHashMap<>();
+        values = new OrderedObjectMap<>();
     }
 
     public Obj(int initialCapacity) {
-        values = new LinkedHashMap<>(Preconditions.nonNegative(initialCapacity, "initialCapacity"));
+        values = new OrderedObjectMap<>(Preconditions.nonNegative(initialCapacity, "initialCapacity"));
     }
 
     @Override public Kind type() { return Kind.OBJECT; }
