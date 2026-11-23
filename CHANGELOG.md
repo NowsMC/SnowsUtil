@@ -31,6 +31,7 @@
 
 ### Fixed
 - `ObjectPool` keeps at most `maxIdle` released objects. `maxIdle()` returns the configured value rather than the queue's rounded capacity, and a pool with `maxIdle` of 0 keeps nothing.
+- `Interpolation.lerp` returns exactly `a` at `t == 0` and `b` at `t == 1`, including when an endpoint is infinite.
 
 ## 1.0.0 - 2026-11-22
 
